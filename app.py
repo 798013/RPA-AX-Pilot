@@ -243,32 +243,35 @@ elif st.session_state["page_state"] == "main_dashboard":
 
 # --- 메인 : 설정 ---
 elif st.session_state["page_state"] == "change_password":
-    st.set_page_config(page_title="비밀번호 변경", layout="wide")
-    render_navigation() # 헤더 호출
+    render_navigation() # 헤더 유지
     
-    st.subheader("⚙️ 비밀번호 변경")
-    with st.form("pw_change_form"):
-        old_pw = st.text_input("현재 비밀번호", type="password")
-        new_pw = st.text_input("새 비밀번호", type="password")
-        confirm_pw = st.text_input("새 비밀번호 확인", type="password")
-        submit = st.form_submit_button("변경하기")
+    # 디자인을 위해 컨테이너로 감싸기
+    with st.container():
+        st.markdown("### 🔑 비밀번호 변경")
+        st.info("새로운 비밀번호로 안전하게 계정을 관리하세요.")
         
-        if submit:
-            if new_pw != confirm_pw:
-                st.error("새 비밀번호가 일치하지 않습니다.")
-            else:
-                conn = sqlite3.connect("rpa_management.db")
-                cursor = conn.cursor()
-                cursor.execute("UPDATE user_master SET user_pw = ? WHERE user_id = ? AND user_pw = ?", 
-                               (new_pw, st.session_state["current_user"], old_pw))
-                if cursor.rowcount > 0:
-                    conn.commit()
-                    st.success("비밀번호가 변경되었습니다.")
+        with st.form("pw_change_form", clear_on_submit=True):
+            old_pw = st.text_input("현재 비밀번호", type="password")
+            new_pw = st.text_input("새 비밀번호", type="password")
+            confirm_pw = st.text_input("새 비밀번호 확인", type="password")
+            
+            # 버튼에 type="primary"를 주면 색상이 입혀져서 훨씬 예쁩니다.
+            submit = st.form_submit_button("비밀번호 변경하기", type="primary", use_container_width=True)
+            
+            if submit:
+                if not old_pw or not new_pw:
+                    st.warning("모든 항목을 입력해주세요.")
+                elif new_pw != confirm_pw:
+                    st.error("새 비밀번호가 일치하지 않습니다.")
                 else:
-                    st.error("현재 비밀번호가 틀렸습니다.")
-                conn.close()
-
-            st.session_state["login_id_key"] = 0
-            st.session_state["login_pw_key"] = 0
-            st.rerun()
-    st.divider()
+                    conn = sqlite3.connect("rpa_management.db")
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE user_master SET user_pw = ? WHERE user_id = ? AND user_pw = ?", 
+                                   (new_pw, st.session_state["current_user"], old_pw))
+                    
+                    if cursor.rowcount > 0:
+                        conn.commit()
+                        st.success("✅ 비밀번호가 성공적으로 변경되었습니다!")
+                    else:
+                        st.error("현재 비밀번호가 틀렸습니다. 다시 확인해주세요.")
+                    conn.close()
