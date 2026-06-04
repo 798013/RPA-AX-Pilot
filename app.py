@@ -59,6 +59,19 @@ if not st.session_state["logged_in"]:
     with col_img_mid:
         st.image("SICT.png", width=200)
 
+    if not st.session_state["logged_in"]:
+    st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
+    
+    # 🎨 [반응형 원천 해결] HTML/CSS를 사용하여 어떤 해상도에서도 무조건 중앙 정렬 및 가로폭 자동 유연화
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: center; align-items: center; width: 100%; margin-bottom: 20px;">
+            <img src="app/static/SICT.png" style="max-width: 250px; width: 50%; height: auto; object-fit: contain;">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+        
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
     with st.form("login_form"):
