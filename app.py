@@ -213,30 +213,42 @@ elif st.session_state["page_state"] == "login":
                 st.session_state["page_state"] = "default_error"
                 st.rerun()
 
+# --- 공통 헤더 함수 (코드 맨 위에 추가해두면 깔끔합니다) ---
+def render_navigation():
+    # 4분할 레이아웃 (반응형 대응)
+    cols = st.columns([6, 1, 1, 1])
+    with cols[1]:
+        if st.button("⬅️ 뒤로가기", use_container_width=True):
+            st.session_state["page_state"] = "main_dashboard"
+            st.rerun()
+    with cols[2]:
+        if st.button("⚙️ 설정", use_container_width=True):
+            st.session_state["page_state"] = "change_password"
+            st.rerun()
+    with cols[3]:
+        if st.button("🚪 로그아웃", use_container_width=True):
+            # 세션 초기화
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            # 초기값 재설정
+            st.session_state["page_state"] = "login"
+            st.session_state["login_id_key"] = 0
+            st.session_state["login_pw_key"] = 0
+            st.rerun()
+    st.divider()
+
 # --- 화면 5: 메인 관제 대시보드 ---
 elif st.session_state["page_state"] == "main_dashboard":
     st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
-    
-    # --- 메인 대시보드 상단 버튼 추가 ---
-    col_main, col_btn = st.columns([8, 2])
-    with col_btn:
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button("설정"):
-                st.session_state["page_state"] = "change_password"
-                st.rerun()
-        with c2:
-            if st.button("로그아웃"):
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
-                st.session_state["page_state"] = "login"
-                st.session_state["login_id_key"] = 0
-                st.session_state["login_pw_key"] = 0
-                st.rerun()
-    st.divider()
+    render_navigation() # 헤더 호출
+    st.title("메인 대시보드")
+    # ... 기존 대시보드 내용 ...
 
 # --- 메인 : 설정 ---
 elif st.session_state["page_state"] == "change_password":
+    st.set_page_config(page_title="비밀번호 변경", layout="wide")
+    render_navigation() # 헤더 호출
+    
     st.subheader("⚙️ 비밀번호 변경")
     with st.form("pw_change_form"):
         old_pw = st.text_input("현재 비밀번호", type="password")
@@ -255,9 +267,6 @@ elif st.session_state["page_state"] == "change_password":
                 if cursor.rowcount > 0:
                     conn.commit()
                     st.success("비밀번호가 변경되었습니다.")
-                    if st.button("대시보드로 돌아가기"):
-                        st.session_state["page_state"] = "main_dashboard"
-                        st.rerun()
                 else:
                     st.error("현재 비밀번호가 틀렸습니다.")
                 conn.close()
