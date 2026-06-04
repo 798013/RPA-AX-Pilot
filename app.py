@@ -8,13 +8,15 @@ import re
 import secrets
 import requests
 
-# --- [함수 정의] 파일 최상단에 딱 한 번만 정의하세요 ---
+# 1. 파일 맨 상단에 함수 정의
 def render_header(title):
-    col_title, col_btns = st.columns([7, 3])
-    with col_title:
-        st.markdown(f"### {title}")
-    with col_btns:
-        b1, b2, b3 = st.columns([1, 1, 1])
+    # 타이틀과 버튼 구역을 명확히 나눕니다.
+    header_col1, header_col2 = st.columns([0.7, 0.3])
+    with header_col1:
+        st.subheader(title)
+    with header_col2:
+        # 버튼 3개를 1:1:1로 정확히 배치
+        b1, b2, b3 = st.columns(3)
         with b1:
             if st.button("⬅️", help="뒤로가기"):
                 st.session_state["page_state"] = "main_dashboard"
