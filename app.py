@@ -251,3 +251,16 @@ elif st.session_state["page_state"] == "login":
             change_page_and_clear_inputs("signup")
     with col_nav3:
         if st.button("로그인", type="primary", use_container_width=True):
+            # 💡 [보정 핵심] 이 아래 구역의 모든 들여쓰기를 if 문 안쪽으로 한 단계 더 밀어 넣었습니다.
+            conn = sqlite3.connect("rpa_management.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
+            db_result = cursor.fetchone()
+            conn.close()
+            
+            if db_result and db_result == user_pw:
+                st.session_state["page_state"] = "main_dashboard"
+                st.rerun()
+            else:
+                st.session_state["page_state"] = "default_error"
+                st.rerun()
