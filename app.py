@@ -193,47 +193,47 @@ elif st.session_state["page_state"] == "login":
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
     
-with st.form("login_form"):
-
-        user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
-        user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
-
-        login_submit = st.form_submit_button("로그인", type="primary", use_container_width=True)
-
-        if login_submit:
-
-            conn = sqlite3.connect("rpa_management.db")
-            cursor = conn.cursor()
-
-            cursor.execute("SELECT user_pw, pw_change_required FROM user_master WHERE user_id = ?", (user_id,))
-            db_result = cursor.fetchone()
-            conn.close()
-
-            if db_result and db_result[0] == user_pw:
-
-                st.session_state["current_user"] = user_id
-
-                if db_result[1] == "Y":
-                    st.session_state["page_state"] = "change_password"
+    with st.form("login_form"):
+    
+            user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
+            user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
+    
+            login_submit = st.form_submit_button("로그인", type="primary", use_container_width=True)
+    
+            if login_submit:
+    
+                conn = sqlite3.connect("rpa_management.db")
+                cursor = conn.cursor()
+    
+                cursor.execute("SELECT user_pw, pw_change_required FROM user_master WHERE user_id = ?", (user_id,))
+                db_result = cursor.fetchone()
+                conn.close()
+    
+                if db_result and db_result[0] == user_pw:
+    
+                    st.session_state["current_user"] = user_id
+    
+                    if db_result[1] == "Y":
+                        st.session_state["page_state"] = "change_password"
+                    else:
+                        st.session_state["page_state"] = "main_dashboard"
+    
+                    st.rerun()
+    
                 else:
-                    st.session_state["page_state"] = "main_dashboard"
-
-                st.rerun()
-
-            else:
-                st.session_state["page_state"] = "default_error"
-                st.rerun()
-
-    st.write("")
-    col_nav1, col_nav2 = st.columns(2)
-
-    with col_nav1:
-        if st.button("ID / PW 찾기", use_container_width=True):
-            change_page_and_clear_inputs("find_account")
-
-    with col_nav2:
-        if st.button("회원 가입", use_container_width=True):
-            change_page_and_clear_inputs("signup")
+                    st.session_state["page_state"] = "default_error"
+                    st.rerun()
+    
+        st.write("")
+        col_nav1, col_nav2 = st.columns(2)
+    
+        with col_nav1:
+            if st.button("ID / PW 찾기", use_container_width=True):
+                change_page_and_clear_inputs("find_account")
+    
+        with col_nav2:
+            if st.button("회원 가입", use_container_width=True):
+                change_page_and_clear_inputs("signup")
 
 # --- 화면 4-1: 임시 비밀번호 변경 ---
 elif st.session_state["page_state"] == "change_password":
