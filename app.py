@@ -198,109 +198,54 @@ except:
 # --- 화면 1: 에러 리다이렉트 ---
 
 if st.session_state["page_state"] == "default_error":
-
-    st.set_page_config(page_title="접근 차단됨", layout="centered")
-
     st.error("🚨 [접근 경고] 잘못된 인증 정보입니다. 등록되지 않은 ID이거나 비밀번호가 다릅니다.")
-
     st.warning("안전을 위해 3초 후 로그인 페이지로 자동 리다이렉트 처리됩니다...")
-
     time.sleep(3)
-
     change_page_and_clear_inputs("login")
 
-
-
 # --- 화면 2: 신규 회원가입 ---
-
 elif st.session_state["page_state"] == "signup":
-
-    st.set_page_config(page_title="신규 회원가입", layout="centered")
-
     st.markdown(logo_html, unsafe_allow_html=True)
-
     st.markdown("<h2 style='text-align: center;'>📝 관제 시스템 신규 회원가입</h2>", unsafe_allow_html=True)
-
-    
-
     with st.form("signup_form"):
-
         new_id = st.text_input("사용할 아이디 (ID)", placeholder="5~15자, 영문 소문자로 시작하는 영문+숫자 조합")
-
         new_pw = st.text_input("비밀번호 (Password)", type="password")
-
         new_name = st.text_input("사용자 이름")
-
         new_email = st.text_input("이메일 주소 (필수 입력)", placeholder="example@sictglobal.com")
-
-        submit_signup = st.form_submit_button("가입 신청 완료")
-
-        
+        submit_signup = st.form_submit_button("가입 신청 완료")     
 
         if submit_signup:
-
             id_pattern = re.compile(r"^[a-z][a-z0-9]{4,14}$")
-
             email_pattern = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
-
             if not (new_id and new_pw and new_name and new_email):
-
                 st.error("⚠️ 모든 칸을 정확하게 입력해 주세요.")
-
             elif not id_pattern.match(new_id):
-
                 st.error("❌ 아이디 규칙 위반: 5~15자 영문 소문자 시작, 영문 소문자+숫자 조합만 가능.")
-
             elif not email_pattern.match(new_email):
-
                 st.error("❌ 이메일 형식 오류: 올바른 이메일 규격으로 다시 입력해 주세요.")
-
             else:
-
                 conn = sqlite3.connect("rpa_management.db")
-
                 cursor = conn.cursor()
-
                 cursor.execute("SELECT user_id FROM user_master WHERE user_id = ?", (new_id,))
-
                 if cursor.fetchone():
-
                     st.error("❌ 이미 존재하는 아이디입니다. 다른 아이디를 입력하세요.")
-
                     conn.close()
-
                 else:
-
                     cursor.execute("INSERT INTO user_master VALUES (?, ?, ?, ?)", (new_id, new_pw, new_name, new_email))
-
                     conn.commit()
-
                     conn.close()
-
                     st.success("🎉 회원가입이 정상적으로 완료되었습니다! 로그인 페이지로 이동합니다.")
-
                     time.sleep(1.5)
-
-                    change_page_and_clear_inputs("login")
-
-                    
+                    change_page_and_clear_inputs("login")                    
 
     if st.button("⬅️ 로그인 화면으로 복귀"):
-
         change_page_and_clear_inputs("login")
-
-
-
+        
 # --- 화면 3: ID / PW 찾기 ---
 
 elif st.session_state["page_state"] == "find_account":
-
-    st.set_page_config(page_title="ID / PW 찾기", layout="centered")
-
     st.markdown(logo_html, unsafe_allow_html=True)
-
     st.markdown("<h2 style='text-align: center;'>🔐 ID / PW 찾기</h2>", unsafe_allow_html=True)
-
     
 
     with st.form("find_form"):
