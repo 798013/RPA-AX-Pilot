@@ -8,108 +8,64 @@ import re
 import secrets
 import requests
 
-# ==========================================
-# 0. 데이터베이스(SQLite) 및 테이블 초기화
-# ==========================================
 def init_db():
     conn = sqlite3.connect("rpa_management.db")
     cursor = conn.cursor()
-    
-    # 회원 관리 마스터 테이블
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_master (
-            user_id TEXT PRIMARY KEY,
-            user_pw TEXT NOT NULL,
-            user_name TEXT NOT NULL,
-            user_email TEXT NOT NULL
+            user_id TEXT PRIMARY KEY, user_pw TEXT NOT NULL, user_name TEXT NOT NULL, user_email TEXT NOT NULL
         )
     """)
-    
-    # 감시 대상 웹페이지 관리 마스터 테이블
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS page_elements (
-            page_name TEXT UNIQUE
-        )
-    """)
-    
-    # AI 치유 이력 및 RAG 캐시 테이블
+    cursor.execute("CREATE TABLE IF NOT EXISTS page_elements (page_name TEXT UNIQUE)")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS selector_healing_logs (
-            log_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT,
-            log_date TEXT,
-            page_name TEXT,
-            element_purpose TEXT,
-            broken_selector TEXT,
-            fixed_selector TEXT,
-            status TEXT
+            log_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, log_date TEXT, page_name TEXT, 
+            element_purpose TEXT, broken_selector TEXT, fixed_selector TEXT, status TEXT
         )
     """)
-    
-    # 초기 테스트 마스터 계정 자동 삽입 (ID: admin / PW: 1234)
     cursor.execute("""
         INSERT OR IGNORE INTO user_master (user_id, user_pw, user_name, user_email)
         VALUES ('admin', '1234', '홍길동', 'sict@sict.co.kr')
     """)
-    
-    # 콤보박스 연동용 기본 가상 웹페이지 정보 채우기
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('국토부_실거래가')")
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('상권정보_포털')")
-    
-    # 페이징 알고리즘 작동 검증을 위한 대량의 더미 로그 생성 (150건)
     cursor.execute("SELECT COUNT(*) FROM selector_healing_logs")
-    if cursor.fetchone() == 0:
+    if cursor.fetchone()[0] == 0:
         for i in range(1, 151):
             cursor.execute("""
                 INSERT INTO selector_healing_logs (user_id, log_date, page_name, element_purpose, broken_selector, fixed_selector, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (f"admin", "2026-06-04", "국토부_실거래가" if i%2==0 else "상권정보_포털", 
-                  "조회_버튼", f"button#old_id_{i}", f"div.new_class_{i} > button", "AI_추천완료"))
+            """, ("admin", "2026-06-04", "국토부_실거래가" if i%2==0 else "상권정보_포털", "조회_버튼", f"button#old_id_{i}", f"div.new_class_{i} > button", "AI_추천완료"))
     conn.commit()
     conn.close()
 
-# 애플리케이션 시작 시 DB 초기화 작동
 init_db()
 
-# 웹페이지 화면 흐름 제어용 세션 상태 정의 (기본값: login)
 if "page_state" not in st.session_state:
     st.session_state["page_state"] = "login"
-
-# 💡 [핵심 보정] 입력값을 물리적으로 완전히 청소해 버리기 위한 고유 제어 키(Key) 선언
 if "login_id_key" not in st.session_state:
     st.session_state["login_id_key"] = 0
 if "login_pw_key" not in st.session_state:
     st.session_state["login_pw_key"] = 1000
 
-# 💡 요구사항 3번: 로그인 실패 또는 리다이렉트 시 화면의 인풋박스를 강제로 비워버리는 하드 클리닝 함수
 def change_page_and_clear_inputs(target_state):
     st.session_state["page_state"] = target_state
-    # 고유 키 일련번호를 강제로 변환시켜 기존 인풋 박스 잔여 데이터를 완전 리셋 소멸시킵니다.
     st.session_state["login_id_key"] += 1
     st.session_state["login_pw_key"] += 1
     st.rerun()
 
-# Formspree API를 이용한 이메일 전송 함수
 def send_temporary_pw_email_api(to_email, user_name, user_id, temp_pw):
     FORMSPREE_URL = "https://formspree.io" 
-    
     email_data = {
-        "작업 대상자 이름": user_name,
-        "알림 수신 이메일": to_email,
-        "발급된 아이디 (ID)": user_id,
-        "새로운 임시 비밀번호 (Temporary PW)": temp_pw,
+        "작업 대상자 이름": user_name, "알림 수신 이메일": to_email, "발급된 아이디 (ID)": user_id, "새로운 임시 비밀번호 (Temporary PW)": temp_pw,
         "message": f"AX-RPA 시스템 인증 안내: {user_name}님의 계정({user_id}) 임시 비밀번호는 [{temp_pw}] 입니다. 로그인 후 즉시 변경하세요."
     }
-    
     try:
         response = requests.post(FORMSPREE_URL, json=email_data)
-        if response.status_code == 200:
-            return True
-        return False
+        return response.status_code == 200
     except:
         return False
 
-# SICT 로고 이미지 로드 및 Base64 인코딩 주입 (보안 및 반응형 중앙 정렬 보장)
 try:
     with open("SICT.png", "rb") as image_file:
         logo_base64 = base64.b64encode(image_file.read()).decode()
@@ -119,24 +75,17 @@ try:
     </div>
     """
 except:
-    logo_html = "<h3 style='text-align: center; color: #1E3A8A;'>🏢 SICT 로고 구역 (SICT.png 파일 없음)</h3>"
+    logo_html = "<h3 style='text-align: center; color: #1E3A8A;'>🏢 SICT 로고 구역</h3>"
 
-# ==========================================
-# [상태 1] 로그인 실패용 Default Page (경고 후 자동 리다이렉트 및 청소 실행)
-# ==========================================
+# --- 화면 1: 에러 리다이렉트 ---
 if st.session_state["page_state"] == "default_error":
     st.set_page_config(page_title="접근 차단됨", layout="centered")
-    st.markdown("<br><br>", unsafe_allow_html=True)
     st.error("🚨 [접근 경고] 잘못된 인증 정보입니다. 등록되지 않은 ID이거나 비밀번호가 다릅니다.")
     st.warning("안전을 위해 3초 후 로그인 페이지로 자동 리다이렉트 처리됩니다...")
-    
     time.sleep(3)
-    # 💡 요구사항 3번: 로그인 실패 후 돌아갈 때 입력되었던 내용을 원천 초기화 공백 처리합니다.
     change_page_and_clear_inputs("login")
 
-# ==========================================
-# [상태 2] 신규 회원가입 화면 (사용자명 입력 오류 보정 완료)
-# ==========================================
+# --- 화면 2: 신규 회원가입 ---
 elif st.session_state["page_state"] == "signup":
     st.set_page_config(page_title="신규 회원가입", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
@@ -156,7 +105,7 @@ elif st.session_state["page_state"] == "signup":
             if not (new_id and new_pw and new_name and new_email):
                 st.error("⚠️ 모든 칸을 정확하게 입력해 주세요. (이메일 주소는 필수 항목입니다.)")
             elif not id_pattern.match(new_id):
-                st.error("❌ 아이디 규칙 위반:\n1. 5자 이상 15자 이하만 가능합니다.\n2. 첫 글자는 반드시 영문 소문자여야 합니다.\n3. 영문 소문자와 숫자 조합만 사용할 수 있습니다. (한글, 특수문자 금지)")
+                st.error("❌ 아이디 규칙 위반: 5~15자 영문 소문자 시작, 영문 소문자+숫자 조합만 가능.")
             elif not email_pattern.match(new_email):
                 st.error("❌ 이메일 형식 오류: 올바른 이메일 규격으로 다시 입력해 주세요.")
             else:
@@ -167,11 +116,8 @@ elif st.session_state["page_state"] == "signup":
                     st.error("❌ 이미 존재하는 아이디입니다. 다른 아이디를 입력하세요.")
                     conn.close()
                 else:
-                    # 💡 요구사항 1번 해결: VALUES에 매핑될 데이터 개수(4개)와 변수 리스트 개수 정밀 싱크 완료!
-                    # 이제 eugne13 계정과 '유지니' 사용자명이 누락 없이 완벽히 DB에 꽂힙니다.
                     cursor.execute("""
-                        INSERT INTO user_master (user_id, user_pw, user_name, user_email)
-                        VALUES (?, ?, ?, ?)
+                        INSERT INTO user_master (user_id, user_pw, user_name, user_email) VALUES (?, ?, ?, ?)
                     """, (new_id, new_pw, new_name, new_email))
                     conn.commit()
                     conn.close()
@@ -182,9 +128,7 @@ elif st.session_state["page_state"] == "signup":
     if st.button("⬅️ 로그인 화면으로 복귀"):
         change_page_and_clear_inputs("login")
 
-# ==========================================
-# [상태 3] ID / PW 찾기 화면 (문법 깨짐 복구 및 튜플 정밀 파싱 완료)
-# ==========================================
+# --- 화면 3: ID / PW 찾기 (임시 비번 발급) ---
 elif st.session_state["page_state"] == "find_account":
     st.set_page_config(page_title="ID / PW 찾기", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
@@ -198,35 +142,21 @@ elif st.session_state["page_state"] == "find_account":
         if submit_find:
             conn = sqlite3.connect("rpa_management.db")
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT user_id, user_name FROM user_master 
-                WHERE user_id = ? AND user_email = ?
-            """, (input_id, input_email))
+            cursor.execute("SELECT user_id, user_name FROM user_master WHERE user_id = ? AND user_email = ?", (input_id, input_email))
             result = cursor.fetchone()
             
             if result:
-                # 💡 요구사항 2번 해결: 튜플 데이터를 정밀 가공하여 순수 문자열만 발라냅니다.
-                # 웹상에서 깨지지 않는 파이썬 표준 리스트 인덱싱 구조를 완벽하게 적용했습니다.
                 target_user_id = result[0]
                 target_user_name = result[1]
-                
-                # 안전한 랜덤 임시 비밀번호 8자리 조합 빌드
                 alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
                 temp_password = "".join(secrets.choice(alphabet) for _ in range(8))
                 
-                # 순수 문자열 데이터를 주입하여 회원 마스터 테이블 비밀번호를 물리적 즉시 영구 업데이트합니다.
-                cursor.execute("""
-                    UPDATE user_master 
-                    SET user_pw = ? 
-                    WHERE user_id = ?
-                """, (temp_password, target_user_id))
+                cursor.execute("UPDATE user_master SET user_pw = ? WHERE user_id = ?", (temp_password, target_user_id))
                 conn.commit()
                 conn.close()
                 
-                # API 전송 트리거 구동
                 send_temporary_pw_email_api(input_email, target_user_name, target_user_id, temp_password)
                 st.success("🎯 회원 정보 일치가 확인되었습니다!\n\n입력하신 이메일 주소로 임시비밀번호를 발송해드렸습니다.")
-                
                 with st.expander("💡 [테스트 안내] 메일이 차단되거나 지연될 경우 확인용"):
                     st.info(f"현재 계정의 비밀번호가 DB상에서 **`{temp_password}`**로 실시간 즉시 업데이트되었습니다. 이 값으로 로그인 테스트를 진행하세요.")
             else:
@@ -236,9 +166,60 @@ elif st.session_state["page_state"] == "find_account":
     if st.button("⬅️ 로그인 화면으로 돌아가기"):
         change_page_and_clear_inputs("login")
 
-# ==========================================
-# [상태 4] 기본 로그인 화면 (자동 청소 필터 내장 연동 구역)
-# ==========================================
+# --- 화면 4: 기본 로그인 화면 (클리닝 탑재) ---
 elif st.session_state["page_state"] == "login":
     st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
+    
+    user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
+    user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
+    
+    st.write("")
+    col_nav1, col_nav2, col_nav3 = st.columns(3)
+    with col_nav1:
+        if st.button("ID / PW 찾기", use_container_width=True):
+            change_page_and_clear_inputs("find_account")
+    with col_nav2:
+        if st.button("회원 가입", use_container_width=True):
+            change_page_and_clear_inputs("signup")
+    with col_nav3:
+        if st.button("로그인", type="primary", use_container_width=True):
+            conn = sqlite3.connect("rpa_management.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
+            db_result = cursor.fetchone()
+            conn.close()
+            
+            if db_result and db_result[0] == user_pw:
+                st.session_state["page_state"] = "main_dashboard"
+                st.rerun()
+            else:
+                st.session_state["page_state"] = "default_error"
+                st.rerun()
+
+# --- 화면 5: 메인 관제 대시보드 ---
+elif st.session_state["page_state"] == "main_dashboard":
+    st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
+    
+    col_title, col_logout = st.columns([0.85, 0.15])
+    with col_title:
+        st.title("🎛️ AX-RPA Selector RAG 제어 포털")
+    with col_logout:
+        if st.button("로그아웃", use_container_width=True):
+            change_page_and_clear_inputs("login")
+
+    st.markdown("---")
+    st.subheader("🔍 Selector 변경 및 로그 조회 조건")
+    
+    conn = sqlite3.connect("rpa_management.db")
+    pages_df = pd.read_sql_query("SELECT page_name FROM page_elements", conn)
+    page_options = pages_df["page_name"].tolist()
+    conn.close()
+
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        search_id = st.text_input("작업자 ID", value="admin")
+    with col2:
+        search_date = st.date_input("조회 일자", datetime.now())
+    with col3:
