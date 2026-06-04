@@ -200,13 +200,16 @@ elif st.session_state["page_state"] == "find_account":
             result = cursor.fetchone()
             
             if result:
-                # 💡 튜플 구조 분해로 문자열 데이터 추출 에러 원천 차단
-                target_user_id = result
-                target_user_name = result
+                # 💡 [ProgrammingError 원천 마스터 해결책] 
+                # 묶음 데이터에서 첫 번째 값을 id, 두 번째 값을 name 문자열 변수로 완벽하게 쪼개서 대입합니다.
+                target_user_id = result[0]
+                target_user_name = result[1]
                 
+                # 안전한 랜덤 임시 비밀번호 8자리 조합 빌드
                 alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
                 temp_password = "".join(secrets.choice(alphabet) for _ in range(8))
                 
+                # 순수 문자열 데이터를 주입하여 DB 트랜잭션을 강제 영구 커밋 처리합니다.
                 cursor.execute("""
                     UPDATE user_master 
                     SET user_pw = ? 
@@ -215,7 +218,10 @@ elif st.session_state["page_state"] == "find_account":
                 conn.commit()
                 conn.close()
                 
+                # API 전송 트리거 구동 (수신자 이름에 순수 텍스트 매핑)
                 send_temporary_pw_email_api(input_email, target_user_name, target_user_id, temp_password)
+                
+                # UI 성공 알림 전시
                 st.success("🎯 회원 정보 일치가 확인되었습니다!\n\n입력하신 이메일 주소로 임시비밀번호를 발송해드렸습니다.")
                 
                 with st.expander("💡 [테스트 안내] 메일이 차단되거나 지연될 경우 확인용"):
