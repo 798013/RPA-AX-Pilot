@@ -197,14 +197,14 @@ elif st.session_state["page_state"] == "find_account":
             result = cursor.fetchone()
             
             if result:
-                # 💡 튜플 구조 분해 처리로 순수 문자열 추출 완벽 보장
-                target_user_id = result
+                # 💡 [에러 해결 원천 마스터 키] 튜플 데이터의 첫 번째 원소인 'admin' 문자열만 정확히 슬라이싱해옵니다!
+                target_user_id = result[0]
                 
-                # 무작위 8자리 안전한 임시 비밀번호 조합 생성
+                # 안전한 랜덤 임시 비밀번호 8자리 조합 빌드
                 alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
                 temp_password = "".join(secrets.choice(alphabet) for _ in range(8))
                 
-                # 💡 [핵심 보정] 임시 비밀번호 트랜잭션 즉시 물리 반영 강제 처리
+                # 순수 문자열 변수를 주입하여 DB 업데이트 트랜잭션 강제 반영
                 cursor.execute("""
                     UPDATE user_master 
                     SET user_pw = ? 
@@ -216,10 +216,10 @@ elif st.session_state["page_state"] == "find_account":
                 # API 전송 트리거 구동
                 send_temporary_pw_email_api(input_email, input_name, target_user_id, temp_password)
                 
-                # UI 문구 고도화 매핑
+                # UI 문구 전시
                 st.success("🎯 회원 정보 일치가 확인되었습니다!\n\n입력하신 이메일 주소로 임시비밀번호를 발송해드렸습니다.")
                 
-                # ⚠️ 메일함 인증 차단이나 지연 시 원활한 테스트 흐름을 유지하기 위한 디버깅 앵커
+                # 메일 차단/지연을 대비한 로컬 확인용 앵커 박스 제공
                 with st.expander("💡 [테스트 안내] 메일이 차단되거나 지연될 경우 확인용"):
                     st.info(f"현재 계정의 비밀번호가 DB상에서 **`{temp_password}`**로 실시간 즉시 업데이트되었습니다. 이 값으로 로그인 테스트를 진행하세요.")
             else:
