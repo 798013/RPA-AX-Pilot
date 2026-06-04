@@ -8,18 +8,12 @@ import re
 import secrets
 import requests
 
-# --- 수정된 네비게이션 및 헤더 영역 ---
+# --- [함수 정의] 파일 최상단에 딱 한 번만 정의하세요 ---
 def render_header(title):
-    # col1: 제목, col2: 버튼들
-    # 7:3 비율로 제목과 버튼을 한 줄에 배치합니다.
     col_title, col_btns = st.columns([7, 3])
-    
     with col_title:
-        # 타이틀 폰트 크기를 직접 조절
         st.markdown(f"### {title}")
-        
     with col_btns:
-        # 버튼들을 우측 끝으로 밀기 위해 내부 컬럼 사용
         b1, b2, b3 = st.columns([1, 1, 1])
         with b1:
             if st.button("⬅️", help="뒤로가기"):
@@ -35,7 +29,7 @@ def render_header(title):
                     del st.session_state[key]
                 st.session_state["page_state"] = "login"
                 st.rerun()
-    st.divider() # 이제 구분선은 이 한 번만 씁니다.
+    st.divider()
     
 def init_db():
     conn = sqlite3.connect("rpa_management.db")
@@ -246,14 +240,13 @@ elif st.session_state["page_state"] == "login":
 elif st.session_state["page_state"] == "main_dashboard":
     st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
 
-    # 페이지 하단 적용 시
-    render_navigation()
+    render_header("등록 내역 검색")
     # 여백을 아예 없애려면 st.write 대신 빈 문자열의 markdown을 이용
     st.markdown("<h3 style='margin-top: -80px;'>등록 내역 검색</h3>", unsafe_allow_html=True)
     
 # --- 메인 : 설정 ---
 elif st.session_state["page_state"] == "change_password":
-    render_navigation()
+    render_header("비밀번호 변경")
     
     # 1. 디자인: 중앙에 좁은 컨테이너 배치 (가로폭을 좁혀 비대칭 해결)
     col_center, _ = st.columns([0.5, 0.5]) 
