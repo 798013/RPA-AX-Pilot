@@ -53,15 +53,6 @@ if "logged_in" not in st.session_state:
 if not st.session_state["logged_in"]:
     st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
     
-    # st.markdown("<h3 style='text-align: center; color: #1E3A8A;'>🏢 회사 CI 로고 구역</h3>", unsafe_allow_html=True)
-    
-    col_img_left, col_img_mid, col_img_right = st.columns([1, 2, 1])
-    with col_img_mid:
-        st.image("SICT.png", width=200)
-
-    if not st.session_state["logged_in"]:
-    st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
-    
     # 🎨 [반응형 원천 해결] HTML/CSS를 사용하여 어떤 해상도에서도 무조건 중앙 정렬 및 가로폭 자동 유연화
     st.markdown(
         """
