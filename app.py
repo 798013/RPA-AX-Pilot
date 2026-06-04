@@ -217,4 +217,47 @@ elif st.session_state["page_state"] == "login":
 elif st.session_state["page_state"] == "main_dashboard":
     st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
     
-    # 💡 요구사항 2번: 왼쪽 트리 메뉴(사이드바) 구성 최적화 및 고정 로그아웃 버튼 생성
+    # --- 메인 대시보드 상단 버튼 추가 ---
+    col_main, col_btn = st.columns([8, 2])
+    with col_btn:
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("설정"):
+                st.session_state["page_state"] = "change_password"
+                st.rerun()
+        with c2:
+            if st.button("로그아웃"):
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                st.session_state["page_state"] = "login"
+                st.session_state["login_id_key"] = 0
+                st.session_state["login_pw_key"] = 0
+                st.rerun()
+    st.divider()
+
+# --- 메인 : 설정 ---
+elif st.session_state["page_state"] == "change_password":
+    st.subheader("⚙️ 비밀번호 변경")
+    with st.form("pw_change_form"):
+        old_pw = st.text_input("현재 비밀번호", type="password")
+        new_pw = st.text_input("새 비밀번호", type="password")
+        confirm_pw = st.text_input("새 비밀번호 확인", type="password")
+        submit = st.form_submit_button("변경하기")
+        
+        if submit:
+            if new_pw != confirm_pw:
+                st.error("새 비밀번호가 일치하지 않습니다.")
+            else:
+                conn = sqlite3.connect("rpa_management.db")
+                cursor = conn.cursor()
+                cursor.execute("UPDATE user_master SET user_pw = ? WHERE user_id = ? AND user_pw = ?", 
+                               (new_pw, st.session_state["current_user"], old_pw))
+                if cursor.rowcount > 0:
+                    conn.commit()
+                    st.success("비밀번호가 변경되었습니다.")
+                    if st.button("대시보드로 돌아가기"):
+                        st.session_state["page_state"] = "main_dashboard"
+                        st.rerun()
+                else:
+                    st.error("현재 비밀번호가 틀렸습니다.")
+                conn.close()
