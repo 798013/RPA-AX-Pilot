@@ -186,15 +186,19 @@ elif st.session_state["page_state"] == "login":
     st.markdown(logo_html, unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
-    # 💡 폼으로 감싸서 Enter 키 로그인 구현 (기존 로직 보존)
-    with st.form("login_form"):
-        user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
-        user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
-        
-        # 폼 내부의 버튼이므로 Enter 키로 자동 제출됨
-        submit_login = st.form_submit_button("로그인", type="primary", use_container_width=True)
-        
-        if submit_login:
+    user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
+    user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
+    
+    st.write("")
+    col_nav1, col_nav2, col_nav3 = st.columns(3)
+    with col_nav1:
+        if st.button("ID / PW 찾기", use_container_width=True):
+            change_page_and_clear_inputs("find_account")
+    with col_nav2:
+        if st.button("회원 가입", use_container_width=True):
+            change_page_and_clear_inputs("signup")
+    with col_nav3:
+        if st.button("로그인", type="primary", use_container_width=True):
             conn = sqlite3.connect("rpa_management.db")
             cursor = conn.cursor()
             cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
@@ -208,15 +212,6 @@ elif st.session_state["page_state"] == "login":
             else:
                 st.session_state["page_state"] = "default_error"
                 st.rerun()
-
-    # 기존 버튼 레이아웃 그대로 유지
-    col_nav1, col_nav2 = st.columns(2)
-    with col_nav1:
-        if st.button("ID / PW 찾기", use_container_width=True):
-            change_page_and_clear_inputs("find_account")
-    with col_nav2:
-        if st.button("회원 가입", use_container_width=True):
-            change_page_and_clear_inputs("signup")
 
 # --- 화면 5: 메인 관제 대시보드 ---
 elif st.session_state["page_state"] == "main_dashboard":
