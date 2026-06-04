@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 from datetime import datetime
+import base64
 
 # 0. 초기 가상 DB 세팅 및 더미 데이터 삽입 (파일럿용 임시 생성)
 def init_db():
@@ -53,15 +54,22 @@ if "logged_in" not in st.session_state:
 if not st.session_state["logged_in"]:
     st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
     
-    # 🎨 [반응형 원천 해결] HTML/CSS를 사용하여 어떤 해상도에서도 무조건 중앙 정렬 및 가로폭 자동 유연화
-    st.markdown(
-        """
-        <div style="display: flex; justify-content: center; align-items: center; width: 100%; margin-bottom: 20px;">
-            <img src="app/static/SICT.png" style="max-width: 250px; width: 50%; height: auto; object-fit: contain;">
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # 🎨 [절대 깨지지 않는 내장형 반응형 정렬] 로컬 이미지를 읽어 가상 주소 없이 다이렉트 주입
+    try:
+        with open("SICT.png", "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode()
+        
+        st.markdown(
+            f"""
+            <div style="display: flex; justify-content: center; align-items: center; width: 100%; margin-bottom: 20px;">
+                <img src="data:image/png;base64,{encoded_string}" style="max-width: 250px; width: 50%; height: auto; object-fit: contain;">
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    except Exception:
+        # 혹시 파일명 대소문자가 다를 경우를 대비한 백업 안내 텍스트
+        st.markdown("<h3 style='text-align: center; color: #1E3A8A;'>🏢 SICT 로고 구역</h3>", unsafe_allow_html=True)
         
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
