@@ -8,6 +8,8 @@ import re
 import secrets
 import requests
 
+st.set_page_config(page_title="AX-RPA 제어 포털", layout="wide")
+
 # 그 바로 밑에 이 함수를 통째로 복사해서 넣으세요.
 def render_header(title):
     h1, h2 = st.columns([0.8, 0.2])
