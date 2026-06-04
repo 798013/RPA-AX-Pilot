@@ -16,6 +16,7 @@ import secrets
 
 import requests
 
+st.set_page_config(page_title="AX-RPA 제어 포털", layout="wide")
 
 
 def render_header(title):
@@ -242,8 +243,6 @@ except:
 
 if st.session_state["page_state"] == "default_error":
 
-    st.set_page_config(page_title="접근 차단됨", layout="centered")
-
     st.error("🚨 [접근 경고] 잘못된 인증 정보입니다. 등록되지 않은 ID이거나 비밀번호가 다릅니다.")
 
     st.warning("안전을 위해 3초 후 로그인 페이지로 자동 리다이렉트 처리됩니다...")
@@ -257,8 +256,6 @@ if st.session_state["page_state"] == "default_error":
 # --- 화면 2: 신규 회원가입 ---
 
 elif st.session_state["page_state"] == "signup":
-
-    st.set_page_config(page_title="신규 회원가입", layout="centered")
 
     st.markdown(logo_html, unsafe_allow_html=True)
 
@@ -338,8 +335,6 @@ elif st.session_state["page_state"] == "signup":
 
 elif st.session_state["page_state"] == "find_account":
 
-    st.set_page_config(page_title="ID / PW 찾기", layout="centered")
-
     st.markdown(logo_html, unsafe_allow_html=True)
 
     st.markdown("<h2 style='text-align: center;'>🔐 ID / PW 찾기</h2>", unsafe_allow_html=True)
@@ -414,7 +409,7 @@ elif st.session_state["page_state"] == "find_account":
 
 elif st.session_state["page_state"] == "login":
 
-    st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
+    
 
     st.markdown(logo_html, unsafe_allow_html=True)
 
@@ -479,8 +474,7 @@ elif st.session_state["page_state"] == "login":
 # --- 화면 5: 메인 관제 대시보드 ---
 
 elif st.session_state["page_state"] == "main_dashboard":
-
-    st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
+    
 
     render_header("등록 내역 검색")
 
