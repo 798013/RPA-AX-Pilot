@@ -186,23 +186,19 @@ elif st.session_state["page_state"] == "login":
     st.markdown(logo_html, unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
-    # 💡 폼 안에서 전체 레이아웃을 통제합니다.
-    with st.form("login_form"):
-        user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
-        user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
-        
-        # 3분할 레이아웃을 폼 안으로 가져옵니다.
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            find_btn = st.form_submit_button("ID / PW 찾기")
-        with col2:
-            signup_btn = st.form_submit_button("회원 가입")
-        with col3:
-            login_btn = st.form_submit_button("로그인", type="primary")
-
-        # 버튼 동작 처리
-        if login_btn:
+    user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
+    user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
+    
+    st.write("")
+    col_nav1, col_nav2, col_nav3 = st.columns(3)
+    with col_nav1:
+        if st.button("ID / PW 찾기", use_container_width=True):
+            change_page_and_clear_inputs("find_account")
+    with col_nav2:
+        if st.button("회원 가입", use_container_width=True):
+            change_page_and_clear_inputs("signup")
+    with col_nav3:
+        if st.button("로그인", type="primary", use_container_width=True):
             conn = sqlite3.connect("rpa_management.db")
             cursor = conn.cursor()
             cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
@@ -216,11 +212,6 @@ elif st.session_state["page_state"] == "login":
             else:
                 st.session_state["page_state"] = "default_error"
                 st.rerun()
-        
-        elif find_btn:
-            change_page_and_clear_inputs("find_account")
-        elif signup_btn:
-            change_page_and_clear_inputs("signup")
 
 # --- 화면 5: 메인 관제 대시보드 ---
 elif st.session_state["page_state"] == "main_dashboard":
