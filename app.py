@@ -180,35 +180,41 @@ elif st.session_state["page_state"] == "find_account":
     if st.button("⬅️ 로그인 화면으로 돌아가기"):
         change_page_and_clear_inputs("login")
 
-# --- 화면 4: 기본 로그인 화면 (수정) ---
+# --- 화면 4: 기본 로그인 화면 ---
 elif st.session_state["page_state"] == "login":
-    st.set_page_config(page_title="로그인", layout="centered")
-    # ... (로고 코드 동일) ...
+    st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
+    st.markdown(logo_html, unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
-    with st.form("login_form"): # 폼으로 감싸서 Enter 키 지원
-        user_id = st.text_input("아이디 (ID)")
-        user_pw = st.text_input("비밀번호 (Password)", type="password")
-        submit_login = st.form_submit_button("로그인", use_container_width=True)
+    user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
+    user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
     
-    # ... (로그인 로직을 submit_login 조건 내부로 이동) ...
+    st.write("")
+    col_nav1, col_nav2, col_nav3 = st.columns(3)
+    with col_nav1:
+        if st.button("ID / PW 찾기", use_container_width=True):
+            change_page_and_clear_inputs("find_account")
+    with col_nav2:
+        if st.button("회원 가입", use_container_width=True):
+            change_page_and_clear_inputs("signup")
+    with col_nav3:
+        if st.button("로그인", type="primary", use_container_width=True):
+            conn = sqlite3.connect("rpa_management.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
+            db_result = cursor.fetchone()
+            conn.close()
+            
+            if db_result and db_result[0] == user_pw:
+                st.session_state["page_state"] = "main_dashboard"
+                st.session_state["current_user"] = user_id
+                st.rerun()
+            else:
+                st.session_state["page_state"] = "default_error"
+                st.rerun()
 
-# --- 관리자 설정 페이지 (신규 추가) ---
-elif st.session_state["page_state"] == "admin_settings":
-    st.title("⚙️ 시스템 환경 설정")
-    if st.session_state["current_user"] != "admin":
-        st.error("관리자만 접근 가능합니다.")
-        if st.button("대시보드로 돌아가기"): change_page_and_clear_inputs("main_dashboard")
-    else:
-        conn = sqlite3.connect("rpa_management.db")
-        configs = pd.read_sql("SELECT * FROM system_config", conn)
-        
-        with st.form("config_update"):
-            new_smtp = st.text_input("SMTP 서버", configs.loc[configs['config_key']=='SMTP_SERVER', 'config_value'].values[0])
-            new_api = st.text_input("EMAIL API KEY", configs.loc[configs['config_key']=='EMAIL_API_KEY', 'config_value'].values[0])
-            if st.form_submit_button("설정 저장"):
-                cursor = conn.cursor()
-                cursor.execute("UPDATE system_config SET config_value = ? WHERE config_key = 'SMTP_SERVER'", (new_smtp,))
-                cursor.execute("UPDATE system_config SET config_value = ? WHERE config_key = 'EMAIL_API_KEY'", (new_api,))
-                conn.commit()
-                st.success("설정이 업데이트되었습니다.")
-        conn.close()
+# --- 화면 5: 메인 관제 대시보드 ---
+elif st.session_state["page_state"] == "main_dashboard":
+    st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
+    
+    # 💡 요구사항 2번: 왼쪽 트리 메뉴(사이드바) 구성 최적화 및 고정 로그아웃 버튼 생성
