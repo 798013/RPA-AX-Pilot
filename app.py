@@ -186,17 +186,15 @@ elif st.session_state["page_state"] == "login":
     st.markdown(logo_html, unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
-    # 폼으로 감싸서 Enter 키 입력 시 제출 처리
+    # 💡 폼으로 감싸서 Enter 키 로그인 구현 (기존 로직 보존)
     with st.form("login_form"):
-        # 기존 키 구조 유지 (change_page_and_clear_inputs 호출 시 리셋됨)
         user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
         user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
         
-        st.write("")
-        submit_btn = st.form_submit_button("로그인", type="primary", use_container_width=True)
+        # 폼 내부의 버튼이므로 Enter 키로 자동 제출됨
+        submit_login = st.form_submit_button("로그인", type="primary", use_container_width=True)
         
-        # 폼 내부에 있으므로 이제 Enter 키를 누르면 이 블록이 실행됨
-        if submit_btn:
+        if submit_login:
             conn = sqlite3.connect("rpa_management.db")
             cursor = conn.cursor()
             cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
@@ -211,8 +209,8 @@ elif st.session_state["page_state"] == "login":
                 st.session_state["page_state"] = "default_error"
                 st.rerun()
 
-    # 로그인 폼 아래에 기존 내비게이션 버튼들을 그대로 유지
-    col_nav1, col_nav2, col_nav3 = st.columns(3)
+    # 기존 버튼 레이아웃 그대로 유지
+    col_nav1, col_nav2 = st.columns(2)
     with col_nav1:
         if st.button("ID / PW 찾기", use_container_width=True):
             change_page_and_clear_inputs("find_account")
