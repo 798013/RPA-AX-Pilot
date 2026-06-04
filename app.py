@@ -243,27 +243,29 @@ elif st.session_state["page_state"] == "main_dashboard":
 
 # --- 메인 : 설정 ---
 elif st.session_state["page_state"] == "change_password":
-    render_navigation() # 헤더 유지
+    render_navigation()
     
-    # 디자인을 위해 컨테이너로 감싸기
-    with st.container():
-        st.markdown("### 🔑 비밀번호 변경")
-        st.info("새로운 비밀번호로 안전하게 계정을 관리하세요.")
+    # 1. 디자인: 중앙에 좁은 컨테이너 배치 (가로폭을 좁혀 비대칭 해결)
+    col_center, _ = st.columns([0.5, 0.5]) 
+    with col_center:
+        st.markdown("#### 🔑 비밀번호 변경")
         
-        with st.form("pw_change_form", clear_on_submit=True):
+        with st.form("pw_change_form"):
+            # 입력창 간격 조절
             old_pw = st.text_input("현재 비밀번호", type="password")
             new_pw = st.text_input("새 비밀번호", type="password")
             confirm_pw = st.text_input("새 비밀번호 확인", type="password")
             
-            # 버튼에 type="primary"를 주면 색상이 입혀져서 훨씬 예쁩니다.
-            submit = st.form_submit_button("비밀번호 변경하기", type="primary", use_container_width=True)
+            # 버튼 크기를 줄이고 색상을 정돈
+            submit = st.form_submit_button("변경하기", type="primary")
             
             if submit:
                 if not old_pw or not new_pw:
-                    st.warning("모든 항목을 입력해주세요.")
+                    st.warning("모든 항목을 입력하세요.")
                 elif new_pw != confirm_pw:
                     st.error("새 비밀번호가 일치하지 않습니다.")
                 else:
+                    # DB 로직 (기존과 동일)
                     conn = sqlite3.connect("rpa_management.db")
                     cursor = conn.cursor()
                     cursor.execute("UPDATE user_master SET user_pw = ? WHERE user_id = ? AND user_pw = ?", 
@@ -271,7 +273,7 @@ elif st.session_state["page_state"] == "change_password":
                     
                     if cursor.rowcount > 0:
                         conn.commit()
-                        st.success("✅ 비밀번호가 성공적으로 변경되었습니다!")
+                        st.success("변경 완료!")
                     else:
-                        st.error("현재 비밀번호가 틀렸습니다. 다시 확인해주세요.")
+                        st.error("현재 비밀번호가 일치하지 않습니다.")
                     conn.close()
