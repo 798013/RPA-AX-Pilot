@@ -181,18 +181,17 @@ elif st.session_state["page_state"] == "find_account":
         change_page_and_clear_inputs("login")
 
 # --- 화면 4: 기본 로그인 화면 ---
-# --- 화면 4: 기본 로그인 화면 ---
 elif st.session_state["page_state"] == "login":
     st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
-    # 폼으로 감싸서 Enter 키 입력 시 제출되도록 설정
+    # 폼으로 감싸서 Enter 키 입력 시 제출되도록 설정 (전체 페이지 구조 유지)
     with st.form("login_form"):
         user_id = st.text_input("아이디 (ID)")
         user_pw = st.text_input("비밀번호 (Password)", type="password")
         
-        # 폼 내부에 배치된 버튼은 Enter 키로 트리거됨
+        # 폼 내부의 버튼이므로 Enter 키로 실행됨
         submit_btn = st.form_submit_button("로그인", type="primary", use_container_width=True)
         
         if submit_btn:
@@ -210,7 +209,7 @@ elif st.session_state["page_state"] == "login":
                 st.session_state["page_state"] = "default_error"
                 st.rerun()
     
-    # 로그인 폼 외부의 버튼들
+    # 로그인 폼 아래에 기존 내비게이션 버튼 배치
     col_nav1, col_nav2 = st.columns(2)
     with col_nav1:
         if st.button("ID / PW 찾기", use_container_width=True):
