@@ -8,30 +8,29 @@ import re
 import secrets
 import requests
 
-# 1. 파일 맨 상단에 함수 정의
 def render_header(title):
-    # 타이틀과 버튼 구역을 명확히 나눕니다.
-    header_col1, header_col2 = st.columns([0.7, 0.3])
-    with header_col1:
-        st.subheader(title)
-    with header_col2:
-        # 버튼 3개를 1:1:1로 정확히 배치
-        b1, b2, b3 = st.columns(3)
-        with b1:
+    # 타이틀(col1)과 버튼들(col2)을 한 줄에 배치
+    h1, h2 = st.columns([0.7, 0.3])
+    with h1:
+        st.subheader(title) # 여기서 타이틀을 한번만 그립니다.
+    with h2:
+        # 버튼을 최대한 오른쪽으로 정렬
+        cols = st.columns([1, 1, 1])
+        with cols[0]:
             if st.button("⬅️", help="뒤로가기"):
                 st.session_state["page_state"] = "main_dashboard"
                 st.rerun()
-        with b2:
+        with cols[1]:
             if st.button("⚙️", help="설정"):
                 st.session_state["page_state"] = "change_password"
                 st.rerun()
-        with b3:
+        with cols[2]:
             if st.button("🚪", help="로그아웃"):
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
                 st.session_state["page_state"] = "login"
                 st.rerun()
-    st.divider()
+    st.divider() # 구분선은 여기서 한 번만 나옵니다.
     
 def init_db():
     conn = sqlite3.connect("rpa_management.db")
@@ -241,10 +240,7 @@ elif st.session_state["page_state"] == "login":
 # --- 화면 5: 메인 관제 대시보드 ---
 elif st.session_state["page_state"] == "main_dashboard":
     st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
-
     render_header("등록 내역 검색")
-    # 여백을 아예 없애려면 st.write 대신 빈 문자열의 markdown을 이용
-    st.markdown("<h3 style='margin-top: -80px;'>등록 내역 검색</h3>", unsafe_allow_html=True)
     
 # --- 메인 : 설정 ---
 elif st.session_state["page_state"] == "change_password":
