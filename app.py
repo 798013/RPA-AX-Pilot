@@ -186,40 +186,41 @@ elif st.session_state["page_state"] == "login":
     st.markdown(logo_html, unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
-    # 1. 입력창 정의 (키 값 유지)
-    user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
-    user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
-    
-    st.write("")
-    
-    # 2. 로그인 수행 로직 (함수로 분리)
-    def perform_login():
-        conn = sqlite3.connect("rpa_management.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
-        db_result = cursor.fetchone()
-        conn.close()
+    # 💡 폼 안에서 전체 레이아웃을 통제합니다.
+    with st.form("login_form"):
+        user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
+        user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
         
-        if db_result and db_result[0] == user_pw:
-            st.session_state["page_state"] = "main_dashboard"
-            st.session_state["current_user"] = user_id
-            st.rerun()
-        else:
-            st.session_state["page_state"] = "default_error"
-            st.rerun()
+        # 3분할 레이아웃을 폼 안으로 가져옵니다.
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            find_btn = st.form_submit_button("ID / PW 찾기")
+        with col2:
+            signup_btn = st.form_submit_button("회원 가입")
+        with col3:
+            login_btn = st.form_submit_button("로그인", type="primary")
 
-    # 3. 레이아웃 그대로 유지
-    col_nav1, col_nav2, col_nav3 = st.columns(3)
-    with col_nav1:
-        if st.button("ID / PW 찾기", use_container_width=True):
+        # 버튼 동작 처리
+        if login_btn:
+            conn = sqlite3.connect("rpa_management.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
+            db_result = cursor.fetchone()
+            conn.close()
+            
+            if db_result and db_result[0] == user_pw:
+                st.session_state["page_state"] = "main_dashboard"
+                st.session_state["current_user"] = user_id
+                st.rerun()
+            else:
+                st.session_state["page_state"] = "default_error"
+                st.rerun()
+        
+        elif find_btn:
             change_page_and_clear_inputs("find_account")
-    with col_nav2:
-        if st.button("회원 가입", use_container_width=True):
+        elif signup_btn:
             change_page_and_clear_inputs("signup")
-    with col_nav3:
-        # 💡 이게 핵심입니다. 마지막에 선언된 primary 버튼은 Enter 키와 자동 연결됩니다.
-        if st.button("로그인", type="primary", use_container_width=True):
-            perform_login()
 
 # --- 화면 5: 메인 관제 대시보드 ---
 elif st.session_state["page_state"] == "main_dashboard":
