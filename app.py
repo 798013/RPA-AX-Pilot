@@ -9,27 +9,34 @@ import secrets
 import requests
 
 # --- 수정된 네비게이션 및 헤더 영역 ---
-def render_navigation():
-    # 전체 너비에서 버튼이 차지할 공간을 우측에 좁게 설정
-    # col1은 왼쪽 빈 공간, col2~col4는 버튼 영역
-    col1, col2, col3, col4 = st.columns([7, 0.7, 0.7, 0.7]) 
+def render_header(title):
+    # col1: 제목, col2: 버튼들
+    # 7:3 비율로 제목과 버튼을 한 줄에 배치합니다.
+    col_title, col_btns = st.columns([7, 3])
     
-    with col2:
-        if st.button("⬅️", help="뒤로가기", use_container_width=True):
-            st.session_state["page_state"] = "main_dashboard"
-            st.rerun()
-    with col3:
-        if st.button("⚙️", help="설정", use_container_width=True):
-            st.session_state["page_state"] = "change_password"
-            st.rerun()
-    with col4:
-        if st.button("🚪", help="로그아웃", use_container_width=True):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.session_state["page_state"] = "login"
-            st.rerun()
-    st.divider()
-
+    with col_title:
+        # 타이틀 폰트 크기를 직접 조절
+        st.markdown(f"### {title}")
+        
+    with col_btns:
+        # 버튼들을 우측 끝으로 밀기 위해 내부 컬럼 사용
+        b1, b2, b3 = st.columns([1, 1, 1])
+        with b1:
+            if st.button("⬅️", help="뒤로가기"):
+                st.session_state["page_state"] = "main_dashboard"
+                st.rerun()
+        with b2:
+            if st.button("⚙️", help="설정"):
+                st.session_state["page_state"] = "change_password"
+                st.rerun()
+        with b3:
+            if st.button("🚪", help="로그아웃"):
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                st.session_state["page_state"] = "login"
+                st.rerun()
+    st.divider() # 이제 구분선은 이 한 번만 씁니다.
+    
 def init_db():
     conn = sqlite3.connect("rpa_management.db")
     cursor = conn.cursor()
