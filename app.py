@@ -238,9 +238,11 @@ elif st.session_state["page_state"] == "login":
 # --- 화면 5: 메인 관제 대시보드 ---
 elif st.session_state["page_state"] == "main_dashboard":
     st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
+
+    # 페이지 하단 적용 시
     render_navigation()
-    # 버튼 그룹과 타이틀이 거의 붙어있게 만듭니다.
-    st.markdown("<h3 style='margin-top: -50px;'>등록 내역 검색</h3>", unsafe_allow_html=True)
+    # 여백을 아예 없애려면 st.write 대신 빈 문자열의 markdown을 이용
+    st.markdown("<h3 style='margin-top: -80px;'>등록 내역 검색</h3>", unsafe_allow_html=True)
     
 # --- 메인 : 설정 ---
 elif st.session_state["page_state"] == "change_password":
