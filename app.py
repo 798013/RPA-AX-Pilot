@@ -223,12 +223,13 @@ elif st.session_state["page_state"] == "main_dashboard":
     with col2:
         search_date = st.date_input("조회 일자", datetime.now())
     with col3:
-        # 💡 [보정 핵심] 이 아래 조건문들의 모든 들여쓰기를 정밀하게 일렬 정렬했습니다.
         search_page = st.selectbox("대상 Web Page (DB 연동)", options=page_options)
     with col4:
-        limit_count = st.selectbox("조회 데이터 제한 (Grid Count)", options=, index=0)
+        # 💡 [문법 오류 해결] 기획하신 데이터 제한 수량 리스트를 정확히 주입했습니다.
+        limit_count = st.selectbox("조회 데이터 제한 (Grid Count)", options=[50, 100, 500], index=0)
     with col5:
-        page_num = st.selectbox("페이지 선택 (Pagination)", options=, index=0)
+        # 💡 [문법 오류 해결] 기획하신 페이징 인덱스 번호 리스트를 정확히 주입했습니다.
+        page_num = st.selectbox("페이지 선택 (Pagination)", options=[1, 2, 3], index=0)
 
     search_submitted = st.button("🚀 조건 조회", type="primary")
 
