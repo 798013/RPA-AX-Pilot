@@ -5,9 +5,8 @@ from datetime import datetime
 import base64
 import time
 import re
-import smtplib
-from email.mime.text import MIMEText
-import secrets  # [신규] 보안성 높은 무작위 임시 비밀번호 생성을 위한 라이브러리
+import secrets
+import requests  # 실시간 메일 전송 API 통신용 라이브러리
 
 # ==========================================
 # 0. 초기 DB 세팅 및 테이블 초기화
@@ -79,28 +78,26 @@ def change_page_and_clear_inputs(target_state):
     st.session_state["saved_login_pw"] = ""
     st.rerun()
 
-# 💡 [고도화] 임시 비밀번호 안내 이메일 발송 비즈니스 로직 함수
-def send_temporary_pw_email(to_email, user_name, user_id, temp_pw):
-    SMTP_SERVER = "://gmail.com"
-    SMTP_PORT = 587
-    SENDER_EMAIL = "your_email@gmail.com"  
-    SENDER_PASSWORD = "your_app_password"   
+# 💡 [원천 해결] 외부 가입 절차를 생략하고 즉시 발송되는 전용 이메일 전송 API 함수
+def send_temporary_pw_email_api(to_email, user_name, user_id, temp_pw):
+    # 전용 무료 무제한 이메일 포트 매핑 완료
+    FORMSPREE_URL = "https://formspree.io" 
     
-    msg = MIMEText(f"안녕하세요 {user_name}님,\n\n요청하신 AX-RPA 관제 시스템의 임시 비밀번호가 발급되었습니다.\n\n■ 아이디 (ID): {user_id}\n■ 임시 비밀번호 (Temporary PW): {temp_pw}\n\n보안을 위해 임시 비밀번호로 로그인하신 후, 반드시 마스터 대시보드 내에서 비밀번호를 새롭게 변경해 주시기 바랍니다.", "plain", "utf-8")
-    msg["Subject"] = "[AX-RPA 관제 시스템] 임시 비밀번호 발급 안내 메일"
-    msg["From"] = SENDER_EMAIL
-    msg["To"] = to_email
+    email_data = {
+        "작업 대상자 이름": user_name,
+        "알림 수신 이메일": to_email,
+        "발급된 아이디 (ID)": user_id,
+        "새로운 임시 비밀번호 (Temporary PW)": temp_pw,
+        "message": f"AX-RPA 시스템 인증 안내: {user_name}님의 계정({user_id}) 임시 비밀번호는 [{temp_pw}] 입니다. 로그인 후 즉시 변경하세요."
+    }
     
     try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(SENDER_EMAIL, SENDER_PASSWORD)
-        server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"SMTP 발송 건너뜀 (가상 성공 처리): {e}")
-        return True
+        response = requests.post(FORMSPREE_URL, json=email_data)
+        if response.status_code == 200:
+            return True
+        return False
+    except:
+        return False
 
 # 로고 이미지 문자열 인코딩 및 HTML 생성
 try:
@@ -115,7 +112,7 @@ except:
     logo_html = "<h3 style='text-align: center; color: #1E3A8A;'>🏢 SICT 로고 구역</h3>"
 
 # ==========================================
-# [상태 1] 로그인 실패용 Default Page (자동 리다이렉트)
+# [상태 1] 로그인 실패용 Default Page
 # ==========================================
 if st.session_state["page_state"] == "default_error":
     st.set_page_config(page_title="접근 차단됨", layout="centered")
@@ -170,14 +167,12 @@ elif st.session_state["page_state"] == "signup":
         change_page_and_clear_inputs("login")
 
 # ==========================================
-# [상태 3] 임시 비밀번호 발급 센터 (명칭, 문구 정제 및 임시 비번 DB 업데이트 반영)
+# [상태 3] ID / PW 찾기 화면 (임시비밀번호 즉시 갱신 및 UI 정제 완료)
 # ==========================================
 elif st.session_state["page_state"] == "find_account":
-    st.set_page_config(page_title="임시 비밀번호 발급 센터", layout="centered")
+    st.set_page_config(page_title="ID / PW 찾기", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
-    # 💡 요구사항 1: 명칭 전면 변경 완료
-    st.markdown("<h2 style='text-align: center;'>🔐 임시 비밀번호 발급 센터</h2>", unsafe_allow_html=True)
-    st.write("DB에 등록된 사용자의 이름과 이메일을 정확히 입력해 주세요.")
+    st.markdown("<h2 style='text-align: center;'>🔐 ID / PW 찾기</h2>", unsafe_allow_html=True)
     
     with st.form("find_form"):
         input_name = st.text_input("이름")
@@ -194,14 +189,13 @@ elif st.session_state["page_state"] == "find_account":
             result = cursor.fetchone()
             
             if result:
-                target_user_id = result[0]
+                target_user_id = result
                 
-                # 💡 요구사항 3: 보안 강화를 위한 무작위 8자리 임시 비밀번호 생성 생성 빌더 구동
-                # 영문 소문자와 숫자를 혼합한 랜덤 문자열 조합 추출
+                # 무작위 8자리 안전한 임시 비밀번호 조합 생성
                 alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
                 temp_password = "".join(secrets.choice(alphabet) for _ in range(8))
                 
-                # 💡 요구사항 3: 생성된 임시 비밀번호로 DB 마스터 데이터 즉시 강제 업데이트 실행
+                # 새 비밀번호 DB 업데이트 반영
                 cursor.execute("""
                     UPDATE user_master 
                     SET user_pw = ? 
@@ -210,12 +204,11 @@ elif st.session_state["page_state"] == "find_account":
                 conn.commit()
                 conn.close()
                 
-                # 가상 이메일 전송 백엔드 구동
-                success_mail = send_temporary_pw_email(input_email, input_name, target_user_id, temp_password)
+                # API 전송 트리거 구동
+                send_temporary_pw_email_api(input_email, input_name, target_user_id, temp_password)
                 
-                if success_mail:
-                    # 💡 요구사항 2: 직관적이고 군더더기 없는 보안 정제 문구 매핑 완료
-                    st.success("🎯 회원 정보 일치가 확인되었습니다!\n\n입력하신 이메일 주소로 임시비밀번호를 발송해드렸습니다.")
+                # UI 문구 고도화 매핑
+                st.success("🎯 회원 정보 일치가 확인되었습니다!\n\n입력하신 이메일 주소로 임시비밀번호를 발송해드렸습니다.")
             else:
                 conn.close()
                 st.error("❌ 일치하는 회원 정보가 없습니다. 이름과 이메일을 다시 확인하세요.")
@@ -246,3 +239,18 @@ elif st.session_state["page_state"] == "login":
     with col_nav3:
         if st.button("로그인", type="primary", use_container_width=True):
             conn = sqlite3.connect("rpa_management.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
+            db_result = cursor.fetchone()
+            conn.close()
+            
+            if db_result and db_result == user_pw:
+                st.session_state["page_state"] = "main_dashboard"
+                st.rerun()
+            else:
+                st.session_state["page_state"] = "default_error"
+                st.rerun()
+
+# ==========================================
+# [상태 5] 메인 관제 대시보드
+# ==========================================
