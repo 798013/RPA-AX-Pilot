@@ -8,25 +8,29 @@ import re
 import secrets
 import requests
 
-# --- 1. [핵심] 네비게이션 함수를 코드 최상단에 미리 정의하세요 ---
+# --- 수정된 네비게이션 및 헤더 영역 ---
 def render_navigation():
-    cols = st.columns([6, 1, 1, 1])
-    with cols[1]:
-        if st.button("⬅️ 뒤로가기", use_container_width=True):
-            st.session_state["page_state"] = "main_dashboard"
-            st.rerun()
-    with cols[2]:
-        if st.button("⚙️ 설정", use_container_width=True):
-            st.session_state["page_state"] = "change_password"
-            st.rerun()
-    with cols[3]:
-        if st.button("🚪 로그아웃", use_container_width=True):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.session_state["page_state"] = "login"
-            st.session_state["login_id_key"] = 0
-            st.session_state["login_pw_key"] = 0
-            st.rerun()
+    # 1. 반응형 헤더 (버튼 그룹을 우측으로 정렬)
+    # col1은 왼쪽 빈 공간, col2는 버튼 영역
+    col1, col2 = st.columns([7, 3]) 
+    
+    with col2:
+        # 2. 버튼들을 3분할하여 컴팩트하게 배치
+        b1, b2, b3 = st.columns(3)
+        with b1:
+            if st.button("⬅️", help="뒤로가기"):
+                st.session_state["page_state"] = "main_dashboard"
+                st.rerun()
+        with b2:
+            if st.button("⚙️", help="설정"):
+                st.session_state["page_state"] = "change_password"
+                st.rerun()
+        with b3:
+            if st.button("🚪", help="로그아웃"):
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                st.session_state["page_state"] = "login"
+                st.rerun()
     st.divider()
 
 def init_db():
@@ -237,10 +241,9 @@ elif st.session_state["page_state"] == "login":
 # --- 화면 5: 메인 관제 대시보드 ---
 elif st.session_state["page_state"] == "main_dashboard":
     st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
-    render_navigation() # 헤더 호출
-    st.title("메인 대시보드")
-    # ... 기존 대시보드 내용 ...
-
+    render_navigation()
+    st.markdown("<h3 style='margin-top: -20px;'>등록 내역 검색</h3>", unsafe_allow_html=True)
+    
 # --- 메인 : 설정 ---
 elif st.session_state["page_state"] == "change_password":
     render_navigation()
