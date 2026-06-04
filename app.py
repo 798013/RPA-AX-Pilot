@@ -10,36 +10,24 @@ import requests
 
 # --- 수정된 네비게이션 및 헤더 영역 ---
 def render_navigation():
-    # .nav-container에 flex-direction: row를 명시하여 한 줄로 강제합니다.
-    st.markdown("""
-        <style>
-        .nav-container { 
-            display: flex !important; 
-            flex-direction: row !important; 
-            justify-content: flex-end !important; 
-            gap: 10px !important; 
-            margin-bottom: -10px !important;
-        }
-        /* 버튼 크기 제한 */
-        .stButton button { width: 40px !important; height: 40px !important; }
-        </style>
-    """, unsafe_allow_html=True)
-
-    with st.container():
-        st.markdown('<div class="nav-container">', unsafe_allow_html=True)
-        # 버튼을 <div> 안에 직접 배치
-        if st.button("⬅️", help="뒤로가기"):
+    # 전체 너비에서 버튼이 차지할 공간을 우측에 좁게 설정
+    # col1은 왼쪽 빈 공간, col2~col4는 버튼 영역
+    col1, col2, col3, col4 = st.columns([7, 0.7, 0.7, 0.7]) 
+    
+    with col2:
+        if st.button("⬅️", help="뒤로가기", use_container_width=True):
             st.session_state["page_state"] = "main_dashboard"
             st.rerun()
-        if st.button("⚙️", help="설정"):
+    with col3:
+        if st.button("⚙️", help="설정", use_container_width=True):
             st.session_state["page_state"] = "change_password"
             st.rerun()
-        if st.button("🚪", help="로그아웃"):
+    with col4:
+        if st.button("🚪", help="로그아웃", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.session_state["page_state"] = "login"
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
     st.divider()
 
 def init_db():
