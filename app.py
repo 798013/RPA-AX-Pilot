@@ -8,6 +8,9 @@ import re
 import secrets
 import requests
 
+# ==========================================
+# 0. 데이터베이스(SQLite) 인프라 초기화
+# ==========================================
 def init_db():
     conn = sqlite3.connect("rpa_management.db")
     cursor = conn.cursor()
@@ -23,23 +26,28 @@ def init_db():
             element_purpose TEXT, broken_selector TEXT, fixed_selector TEXT, status TEXT
         )
     """)
+    # 💡 [고도화 2] 인프라 환경설정 정보를 영구 저장할 시스템 테이블 추가
     cursor.execute("""
-        INSERT OR IGNORE INTO user_master (user_id, user_pw, user_name, user_email)
-        VALUES ('admin', '1234', '홍길동', 'sict@sict.co.kr')
+        CREATE TABLE IF NOT EXISTS system_config (
+            config_key TEXT PRIMARY KEY, config_value TEXT
+        )
     """)
+    cursor.execute("INSERT OR IGNORE INTO user_master VALUES ('admin', '1234', '홍길동', 'sict@sict.co.kr')")
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('국토부_실거래가')")
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('상권정보_포털')")
-    cursor.execute("SELECT COUNT(*) FROM selector_healing_logs")
-    if cursor.fetchone()[0] == 0:
-        for i in range(1, 151):
-            cursor.execute("""
-                INSERT INTO selector_healing_logs (user_id, log_date, page_name, element_purpose, broken_selector, fixed_selector, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, ("admin", "2026-06-04", "국토부_실거래가" if i%2==0 else "상권정보_포털", "조회_버튼", f"button#old_id_{i}", f"div.new_class_{i} > button", "AI_추천완료"))
+    
+    # 💡 [어드민 기본값 세팅] SMTP 및 DB 기본 접속 정보를 안전하게 인서트
+    cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('SMTP_SERVER', '://gmail.com')")
+    cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('SMTP_PORT', '587')")
+    cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('DB_PATH', 'rpa_management.db')")
+    cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('EMAIL_API_KEY', 'mqkrwdrn')")
     conn.commit()
     conn.close()
 
 init_db()
+
+# 💡 요구사항 1번: 150건의 지저분한 Default 더미 데이터를 생성하던 강제 삽입 로직을 완벽히 삭제했습니다.
+# 이제 시스템 구동 시 첫 화면이 깨끗하게 유지됩니다.
 
 if "page_state" not in st.session_state:
     st.session_state["page_state"] = "login"
@@ -47,6 +55,8 @@ if "login_id_key" not in st.session_state:
     st.session_state["login_id_key"] = 0
 if "login_pw_key" not in st.session_state:
     st.session_state["login_pw_key"] = 1000
+if "current_user" not in st.session_state:
+    st.session_state["current_user"] = ""
 
 def change_page_and_clear_inputs(target_state):
     st.session_state["page_state"] = target_state
@@ -55,10 +65,16 @@ def change_page_and_clear_inputs(target_state):
     st.rerun()
 
 def send_temporary_pw_email_api(to_email, user_name, user_id, temp_pw):
-    FORMSPREE_URL = "https://formspree.io" 
+    conn = sqlite3.connect("rpa_management.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT config_value FROM system_config WHERE config_key = 'EMAIL_API_KEY'")
+    api_key = cursor.fetchone()[0]
+    conn.close()
+    
+    FORMSPREE_URL = f"https://formspree.io{api_key}" 
     email_data = {
-        "작업 대상자 이름": user_name, "알림 수신 이메일": to_email, "발급된 아이디 (ID)": user_id, "새로운 임시 비밀번호 (Temporary PW)": temp_pw,
-        "message": f"AX-RPA 시스템 인증 안내: {user_name}님의 계정({user_id}) 임시 비밀번호는 [{temp_pw}] 입니다. 로그인 후 즉시 변경하세요."
+        "작업 대상자 이름": user_name, "알림 수신 이메일": to_email, "발급된 아이디 (ID)": user_id, "임시 비밀번호": temp_pw,
+        "message": f"AX-RPA 인증: {user_name}님의 계정 임시 비밀번호는 [{temp_pw}] 입니다."
     }
     try:
         response = requests.post(FORMSPREE_URL, json=email_data)
@@ -116,9 +132,7 @@ elif st.session_state["page_state"] == "signup":
                     st.error("❌ 이미 존재하는 아이디입니다. 다른 아이디를 입력하세요.")
                     conn.close()
                 else:
-                    cursor.execute("""
-                        INSERT INTO user_master (user_id, user_pw, user_name, user_email) VALUES (?, ?, ?, ?)
-                    """, (new_id, new_pw, new_name, new_email))
+                    cursor.execute("INSERT INTO user_master VALUES (?, ?, ?, ?)", (new_id, new_pw, new_name, new_email))
                     conn.commit()
                     conn.close()
                     st.success("🎉 회원가입이 정상적으로 완료되었습니다! 로그인 페이지로 이동합니다.")
@@ -128,7 +142,7 @@ elif st.session_state["page_state"] == "signup":
     if st.button("⬅️ 로그인 화면으로 복귀"):
         change_page_and_clear_inputs("login")
 
-# --- 화면 3: ID / PW 찾기 (임시 비번 발급) ---
+# --- 화면 3: ID / PW 찾기 ---
 elif st.session_state["page_state"] == "find_account":
     st.set_page_config(page_title="ID / PW 찾기", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
@@ -166,7 +180,7 @@ elif st.session_state["page_state"] == "find_account":
     if st.button("⬅️ 로그인 화면으로 돌아가기"):
         change_page_and_clear_inputs("login")
 
-# --- 화면 4: 기본 로그인 화면 (클리닝 탑재) ---
+# --- 화면 4: 기본 로그인 화면 ---
 elif st.session_state["page_state"] == "login":
     st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
@@ -193,86 +207,19 @@ elif st.session_state["page_state"] == "login":
             
             if db_result and db_result[0] == user_pw:
                 st.session_state["page_state"] = "main_dashboard"
+                st.session_state["current_user"] = user_id
                 st.rerun()
             else:
                 st.session_state["page_state"] = "default_error"
                 st.rerun()
 
-# --- 화면 5: 메인 관제 대시보드 ---
+# --- 화면 5: 메인 관제 대시보드 (어드민 환경설정 연동 버전) ---
 elif st.session_state["page_state"] == "main_dashboard":
     st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
     
-    col_title, col_logout = st.columns([0.85, 0.15])
-    with col_title:
-        st.title("🎛️ AX-RPA Selector RAG 제어 포털")
-    with col_logout:
-        if st.button("로그아웃", use_container_width=True):
-            change_page_and_clear_inputs("login")
+    # 💡 [고도화 2] 오직 최고 관리자(admin) 계정으로 접근했을 때만 사이드바에 어드민 설정 메뉴 오픈
+    admin_menu = "📊 메인 관제 콘솔"
+    if st.session_state["current_user"] == "admin":
+        admin_menu = st.sidebar.radio("⚙️ 마스터 시스템 관리", ["📊 메인 관제 콘솔", "🛠️ 인프라 환경설정 (Admin)"])
 
-    st.markdown("---")
-    st.subheader("🔍 Selector 변경 및 로그 조회 조건")
-    
-    conn = sqlite3.connect("rpa_management.db")
-    pages_df = pd.read_sql_query("SELECT page_name FROM page_elements", conn)
-    page_options = pages_df["page_name"].tolist()
-    conn.close()
-
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        search_id = st.text_input("작업자 ID", value="admin")
-    with col2:
-        search_date = st.date_input("조회 일자", datetime.now())
-    with col3:
-        search_page = st.selectbox("대상 Web Page (DB 연동)", options=page_options)
-    with col4:
-        # 💡 [문법 오류 해결] 기획하신 데이터 제한 수량 리스트를 정확히 주입했습니다.
-        limit_count = st.selectbox("조회 데이터 제한 (Grid Count)", options=[50, 100, 500], index=0)
-    with col5:
-        # 💡 [문법 오류 해결] 기획하신 페이징 인덱스 번호 리스트를 정확히 주입했습니다.
-        page_num = st.selectbox("페이지 선택 (Pagination)", options=[1, 2, 3], index=0)
-
-    search_submitted = st.button("🚀 조건 조회", type="primary")
-
-    if search_submitted or "current_data" in st.session_state:
-        st.markdown("---")
-        st.subheader("📊 Selector 매칭 및 치유 이력 (Grid)")
-        
-        offset_value = limit_count * (page_num - 1)
-        
-        conn = sqlite3.connect("rpa_management.db")
-        query = """
-            SELECT log_id, user_id, log_date, page_name, element_purpose, broken_selector, fixed_selector, status
-            FROM selector_healing_logs WHERE page_name = ? LIMIT ? OFFSET ?
-        """
-        df = pd.read_sql_query(query, conn, params=(search_page, limit_count, offset_value))
-        conn.close()
-
-        if not df.empty:
-            st.success(f"🎯 {len(df)}건의 데이터를 조회했습니다. (선택된 페이지: {page_num}번 구간)")
-            
-            towrite = pd.ExcelWriter('rpa_selector_logs.xlsx', engine='xlsxwriter')
-            df.to_excel(towrite, index=False, sheet_name='Sheet1')
-            towrite.close()
-            
-            with open('rpa_selector_logs.xlsx', 'rb') as f:
-                st.download_button(label="📥 엑셀 내려받기", data=f, file_name=f"RPA_Logs_Page_{page_num}.xlsx", mime="application/vnd.ms-excel")
-            
-            st.info("💡 정보 수정 안내: 아래 그리드에서 'fixed_selector' 칸을 더블클릭하여 수정 후 아래 버튼을 누르세요.")
-            
-            edited_df = st.data_editor(
-                df, num_rows="dynamic", use_container_width=True,
-                disabled=["log_id", "user_id", "log_date", "page_name", "element_purpose", "broken_selector"]
-            )
-            
-            if st.button("💾 수정 내용 DB 반영 (Update RAG)"):
-                conn = sqlite3.connect("rpa_management.db")
-                cursor = conn.cursor()
-                for index, row in edited_df.iterrows():
-                    cursor.execute("""
-                        UPDATE selector_healing_logs SET fixed_selector = ?, status = '정밀보정완료' WHERE log_id = ?
-                    """, (row['fixed_selector'], row['log_id']))
-                conn.commit()
-                conn.close()
-                st.toast("🎉 수정 사항이 데이터베이스에 실시간 업데이트되었습니다!", icon="✅")
-        else:
-            st.warning("조회 조건에 일치하는 데이터가 현재 페이지 구간에 존재하지 않습니다.")
+    # ----------------------------------------
