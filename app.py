@@ -53,7 +53,12 @@ if "logged_in" not in st.session_state:
 if not st.session_state["logged_in"]:
     st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
     
-    st.markdown("<h3 style='text-align: center; color: #1E3A8A;'>🏢 회사 CI 로고 구역</h3>", unsafe_allow_html=True)
+    # st.markdown("<h3 style='text-align: center; color: #1E3A8A;'>🏢 회사 CI 로고 구역</h3>", unsafe_allow_html=True)
+    
+    col_img_left, col_img_mid, col_img_right = st.columns([1, 2, 1])
+    with col_img_mid:
+    st.image("SICT.png", width=200)
+
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
     with st.form("login_form"):
