@@ -8,6 +8,27 @@ import re
 import secrets
 import requests
 
+# --- 1. [핵심] 네비게이션 함수를 코드 최상단에 미리 정의하세요 ---
+def render_navigation():
+    cols = st.columns([6, 1, 1, 1])
+    with cols[1]:
+        if st.button("⬅️ 뒤로가기", use_container_width=True):
+            st.session_state["page_state"] = "main_dashboard"
+            st.rerun()
+    with cols[2]:
+        if st.button("⚙️ 설정", use_container_width=True):
+            st.session_state["page_state"] = "change_password"
+            st.rerun()
+    with cols[3]:
+        if st.button("🚪 로그아웃", use_container_width=True):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.session_state["page_state"] = "login"
+            st.session_state["login_id_key"] = 0
+            st.session_state["login_pw_key"] = 0
+            st.rerun()
+    st.divider()
+
 def init_db():
     conn = sqlite3.connect("rpa_management.db")
     cursor = conn.cursor()
@@ -247,25 +268,6 @@ elif st.session_state["page_state"] == "change_password":
                     st.error("현재 비밀번호가 틀렸습니다.")
                 conn.close()
 
-# --- 공통 헤더 함수 (코드 맨 위에 추가해두면 깔끔합니다) ---
-def render_navigation():
-    # 4분할 레이아웃 (반응형 대응)
-    cols = st.columns([6, 1, 1, 1])
-    with cols[1]:
-        if st.button("⬅️ 뒤로가기", use_container_width=True):
-            st.session_state["page_state"] = "main_dashboard"
-            st.rerun()
-    with cols[2]:
-        if st.button("⚙️ 설정", use_container_width=True):
-            st.session_state["page_state"] = "change_password"
-            st.rerun()
-    with cols[3]:
-        if st.button("🚪 로그아웃", use_container_width=True):
-            # 세션 초기화
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            # 초기값 재설정
-            st.session_state["page_state"] = "login"
             st.session_state["login_id_key"] = 0
             st.session_state["login_pw_key"] = 0
             st.rerun()
