@@ -186,13 +186,13 @@ elif st.session_state["page_state"] == "login":
     st.markdown(logo_html, unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
-    # 💡 폼을 사용하지 않고 기존 UI 구조를 그대로 유지
+    # 1. 입력창 정의 (키 값 유지)
     user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
     user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
     
     st.write("")
     
-    # 💡 로그인 로직 함수화 (버튼과 Enter 키에 모두 대응하기 위함)
+    # 2. 로그인 수행 로직 (함수로 분리)
     def perform_login():
         conn = sqlite3.connect("rpa_management.db")
         cursor = conn.cursor()
@@ -208,7 +208,7 @@ elif st.session_state["page_state"] == "login":
             st.session_state["page_state"] = "default_error"
             st.rerun()
 
-    # 기존 버튼 레이아웃 유지
+    # 3. 레이아웃 그대로 유지
     col_nav1, col_nav2, col_nav3 = st.columns(3)
     with col_nav1:
         if st.button("ID / PW 찾기", use_container_width=True):
@@ -217,7 +217,7 @@ elif st.session_state["page_state"] == "login":
         if st.button("회원 가입", use_container_width=True):
             change_page_and_clear_inputs("signup")
     with col_nav3:
-        # 로그인 버튼
+        # 💡 이게 핵심입니다. 마지막에 선언된 primary 버튼은 Enter 키와 자동 연결됩니다.
         if st.button("로그인", type="primary", use_container_width=True):
             perform_login()
 
