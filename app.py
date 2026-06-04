@@ -181,24 +181,21 @@ elif st.session_state["page_state"] == "find_account":
         change_page_and_clear_inputs("login")
 
 # --- 화면 4: 기본 로그인 화면 ---
+# --- 화면 4: 기본 로그인 화면 ---
 elif st.session_state["page_state"] == "login":
     st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
-    user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
-    user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
-    
-    st.write("")
-    col_nav1, col_nav2, col_nav3 = st.columns(3)
-    with col_nav1:
-        if st.button("ID / PW 찾기", use_container_width=True):
-            change_page_and_clear_inputs("find_account")
-    with col_nav2:
-        if st.button("회원 가입", use_container_width=True):
-            change_page_and_clear_inputs("signup")
-    with col_nav3:
-        if st.button("로그인", type="primary", use_container_width=True):
+    # 폼으로 감싸서 Enter 키 입력 시 제출되도록 설정
+    with st.form("login_form"):
+        user_id = st.text_input("아이디 (ID)")
+        user_pw = st.text_input("비밀번호 (Password)", type="password")
+        
+        # 폼 내부에 배치된 버튼은 Enter 키로 트리거됨
+        submit_btn = st.form_submit_button("로그인", type="primary", use_container_width=True)
+        
+        if submit_btn:
             conn = sqlite3.connect("rpa_management.db")
             cursor = conn.cursor()
             cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
@@ -212,6 +209,15 @@ elif st.session_state["page_state"] == "login":
             else:
                 st.session_state["page_state"] = "default_error"
                 st.rerun()
+    
+    # 로그인 폼 외부의 버튼들
+    col_nav1, col_nav2 = st.columns(2)
+    with col_nav1:
+        if st.button("ID / PW 찾기", use_container_width=True):
+            change_page_and_clear_inputs("find_account")
+    with col_nav2:
+        if st.button("회원 가입", use_container_width=True):
+            change_page_and_clear_inputs("signup")
 
 # --- 화면 5: 메인 관제 대시보드 ---
 elif st.session_state["page_state"] == "main_dashboard":
