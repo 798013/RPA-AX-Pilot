@@ -57,7 +57,7 @@ if not st.session_state["logged_in"]:
     
     col_img_left, col_img_mid, col_img_right = st.columns([1, 2, 1])
     with col_img_mid:
-    st.image("SICT.png", width=200)
+        st.image("SICT.png", width=200)
 
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
