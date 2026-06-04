@@ -1,87 +1,42 @@
 import streamlit as st
-
 import pandas as pd
-
 import sqlite3
-
 from datetime import datetime
-
 import base64
-
 import time
-
 import re
-
 import secrets
-
 import requests
 
-
-
+# 그 바로 밑에 이 함수를 통째로 복사해서 넣으세요.
 def render_header(title):
-
-    # 타이틀(col1)과 버튼들(col2)을 한 줄에 배치
-
-    h1, h2 = st.columns([0.7, 0.3])
-
+    h1, h2 = st.columns([0.8, 0.2])
     with h1:
-
-        st.subheader(title) # 여기서 타이틀을 한번만 그립니다.
-
+        st.subheader(title)
     with h2:
-
-        # 버튼을 최대한 오른쪽으로 정렬
-
-        cols = st.columns([1, 1, 1])
-
-        with cols[0]:
-
-            if st.button("⬅️", help="뒤로가기"):
-
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            if st.button("⬅️"):
                 st.session_state["page_state"] = "main_dashboard"
-
                 st.rerun()
-
-        with cols[1]:
-
-            if st.button("⚙️", help="설정"):
-
+        with c2:
+            if st.button("⚙️"):
                 st.session_state["page_state"] = "change_password"
-
                 st.rerun()
-
-        with cols[2]:
-
-            if st.button("🚪", help="로그아웃"):
-
-                for key in list(st.session_state.keys()):
-
-                    del st.session_state[key]
-
+        with c3:
+            if st.button("🚪"):
                 st.session_state["page_state"] = "login"
-
                 st.rerun()
-
-    st.divider() # 구분선은 여기서 한 번만 나옵니다.
-
-    
+    st.divider()
 
 def init_db():
-
     conn = sqlite3.connect("rpa_management.db")
-
     cursor = conn.cursor()
-
     cursor.execute("""
-
         CREATE TABLE IF NOT EXISTS user_master (
-
             user_id TEXT PRIMARY KEY, user_pw TEXT NOT NULL, user_name TEXT NOT NULL, user_email TEXT NOT NULL
-
         )
-
     """)
-
     cursor.execute("CREATE TABLE IF NOT EXISTS page_elements (page_name TEXT UNIQUE)")
 
     cursor.execute("""
@@ -477,22 +432,14 @@ elif st.session_state["page_state"] == "login":
 
 
 # --- 화면 5: 메인 관제 대시보드 ---
-
 elif st.session_state["page_state"] == "main_dashboard":
-
-    st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
-
+    # 1. 헤더 함수 호출
     render_header("등록 내역 검색")
 
-    
 
 # --- 메인 : 설정 ---
-
 elif st.session_state["page_state"] == "change_password":
-
-    render_header("비밀번호 변경")
-
-    
+    render_header("비밀번호 변경")    
 
     # 1. 디자인: 중앙에 좁은 컨테이너 배치 (가로폭을 좁혀 비대칭 해결)
 
