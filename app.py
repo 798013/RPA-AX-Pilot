@@ -13,15 +13,9 @@ def init_db():
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_master (
-            user_id TEXT PRIMARY KEY, user_pw TEXT NOT NULL, user_name TEXT NOT NULL, user_email TEXT NOT NULL,
-            pw_change_required TEXT DEFAULT 'N'
+            user_id TEXT PRIMARY KEY, user_pw TEXT NOT NULL, user_name TEXT NOT NULL, user_email TEXT NOT NULL
         )
     """)
-    try:
-        cursor.execute("ALTER TABLE user_master ADD COLUMN pw_change_required TEXT DEFAULT 'N'")
-    except:
-        pass
-
     cursor.execute("CREATE TABLE IF NOT EXISTS page_elements (page_name TEXT UNIQUE)")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS selector_healing_logs (
@@ -34,7 +28,7 @@ def init_db():
             config_key TEXT PRIMARY KEY, config_value TEXT
         )
     """)
-    cursor.execute("INSERT OR IGNORE INTO user_master VALUES ('admin', '1234', '홍길동', 'sict@sict.co.kr','N')")
+    cursor.execute("INSERT OR IGNORE INTO user_master VALUES ('admin', '1234', '홍길동', 'sict@sict.co.kr')")
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('국토부_실거래가')")
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('상권정보_포털')")
     
@@ -171,7 +165,7 @@ elif st.session_state["page_state"] == "find_account":
                 alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
                 temp_password = "".join(secrets.choice(alphabet) for _ in range(8))
                 
-                cursor.execute("UPDATE user_master SET user_pw=?, pw_change_required='Y' WHERE user_id=?", (temp_password, target_user_id))
+                cursor.execute("UPDATE user_master SET user_pw = ? WHERE user_id = ?", (temp_password, target_user_id))
                 conn.commit()
                 conn.close()
                 
@@ -188,116 +182,167 @@ elif st.session_state["page_state"] == "find_account":
 
 # --- 화면 4: 기본 로그인 화면 ---
 elif st.session_state["page_state"] == "login":
-
-    st.set_page_config(
-        page_title="AX-RPA 제어 포털 로그인",
-        layout="centered"
-    )
-
+    st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
-
-    st.markdown(
-        "<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>",
-        unsafe_allow_html=True
-    )
-
-    with st.form("login_form"):
-
-        user_id = st.text_input(
-            "아이디 (ID)",
-            key=f"id_input_{st.session_state['login_id_key']}"
-        )
-
-        user_pw = st.text_input(
-            "비밀번호 (Password)",
-            type="password",
-            key=f"pw_input_{st.session_state['login_pw_key']}"
-        )
-
-        login_submit = st.form_submit_button(
-            "로그인",
-            type="primary",
-            use_container_width=True
-        )
-
-        if login_submit:
-
-            conn = sqlite3.connect("rpa_management.db")
-            cursor = conn.cursor()
-
-            cursor.execute(
-                "SELECT user_pw, pw_change_required FROM user_master WHERE user_id=?",
-                (user_id,)
-            )
-
-            db_result = cursor.fetchone()
-
-            conn.close()
-
-            if db_result and db_result[0] == user_pw:
-
-                st.session_state["current_user"] = user_id
-
-                if db_result[1] == "Y":
-                    st.session_state["page_state"] = "change_password"
-                else:
-                    st.session_state["page_state"] = "main_dashboard"
-
-                st.rerun()
-
-            else:
-
-                st.session_state["page_state"] = "default_error"
-                st.rerun()
-
+    st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
+    
+    user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
+    user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
+    
     st.write("")
-
-    col_nav1, col_nav2 = st.columns(2)
-
+    col_nav1, col_nav2, col_nav3 = st.columns(3)
     with col_nav1:
         if st.button("ID / PW 찾기", use_container_width=True):
             change_page_and_clear_inputs("find_account")
-
     with col_nav2:
         if st.button("회원 가입", use_container_width=True):
             change_page_and_clear_inputs("signup")
-
-# --- 화면 4-1: 임시 비밀번호 변경 ---
-elif st.session_state["page_state"] == "change_password":
-
-    st.set_page_config(page_title="비밀번호 변경", layout="centered")
-
-    st.markdown(logo_html, unsafe_allow_html=True)
-    st.subheader("🔑 임시 비밀번호 변경")
-
-    new_pw = st.text_input("새 비밀번호", type="password")
-    confirm_pw = st.text_input("새 비밀번호 확인", type="password")
-
-    if st.button("비밀번호 변경 완료"):
-
-        if new_pw != confirm_pw:
-            st.error("비밀번호가 일치하지 않습니다.")
-        else:
-
+    with col_nav3:
+        if st.button("로그인", type="primary", use_container_width=True):
             conn = sqlite3.connect("rpa_management.db")
             cursor = conn.cursor()
-
-            cursor.execute(
-                "UPDATE user_master SET user_pw=?, pw_change_required='N' WHERE user_id=?",
-                (new_pw, st.session_state["current_user"])
-            )
-
-            conn.commit()
+            cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
+            db_result = cursor.fetchone()
             conn.close()
+            
+            if db_result and db_result[0] == user_pw:
+                st.session_state["page_state"] = "main_dashboard"
+                st.session_state["current_user"] = user_id
+                st.rerun()
+            else:
+                st.session_state["page_state"] = "default_error"
+                st.rerun()
 
-            st.success("비밀번호 변경 완료")
-            time.sleep(1)
-
-            st.session_state["page_state"] = "main_dashboard"
-            st.rerun()
 
 # --- 화면 5: 메인 관제 대시보드 ---
 elif st.session_state["page_state"] == "main_dashboard":
-    st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
-    
-    # 💡 요구사항 2번: 왼쪽 트리 메뉴(사이드바) 구성 최적화 및 고정 로그아웃 버튼 생성
+
+    st.set_page_config(
+        page_title="AX-RPA Selector 관제 콘솔",
+        layout="wide"
+    )
+
+    st.title("🤖 AX-RPA Selector 관제 콘솔")
+
+    with st.sidebar:
+
+        st.success(
+            f"사용자 : {st.session_state['current_user']}"
+        )
+
+        menu = st.radio(
+            "메뉴 선택",
+            [
+                "Dashboard",
+                "Healing 이력",
+                "페이지 관리",
+                "시스템 설정",
+                "비밀번호 변경",
+                "로그아웃"
+            ]
+        )
+
+    conn = sqlite3.connect("rpa_management.db")
+
+    if menu == "Dashboard":
+
+        page_count = pd.read_sql(
+            "SELECT COUNT(*) cnt FROM page_elements",
+            conn
+        )["cnt"][0]
+
+        log_count = pd.read_sql(
+            "SELECT COUNT(*) cnt FROM selector_healing_logs",
+            conn
+        )["cnt"][0]
+
+        success_count = pd.read_sql(
+            "SELECT COUNT(*) cnt FROM selector_healing_logs WHERE status='AI_추천완료'",
+            conn
+        )["cnt"][0]
+
+        user_count = pd.read_sql(
+            "SELECT COUNT(*) cnt FROM user_master",
+            conn
+        )["cnt"][0]
+
+        c1, c2, c3, c4 = st.columns(4)
+
+        c1.metric("등록 페이지", page_count)
+        c2.metric("Healing 건수", log_count)
+        c3.metric("성공 건수", success_count)
+        c4.metric("사용자 수", user_count)
+
+        st.divider()
+
+        st.subheader("최근 Healing 이력")
+
+        df = pd.read_sql("""
+            SELECT log_date,page_name,broken_selector,fixed_selector,status
+            FROM selector_healing_logs
+            ORDER BY log_id DESC
+            LIMIT 20
+        """, conn)
+
+        st.dataframe(df, use_container_width=True)
+
+    elif menu == "Healing 이력":
+
+        st.subheader("Selector Healing 이력")
+
+        df = pd.read_sql(
+            "SELECT * FROM selector_healing_logs ORDER BY log_id DESC",
+            conn
+        )
+
+        st.dataframe(df, use_container_width=True)
+
+    elif menu == "페이지 관리":
+
+        st.subheader("관리 대상 페이지")
+
+        pages = pd.read_sql(
+            "SELECT * FROM page_elements",
+            conn
+        )
+
+        st.dataframe(pages, use_container_width=True)
+
+        new_page = st.text_input("신규 페이지명")
+
+        if st.button("페이지 추가"):
+
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "INSERT OR IGNORE INTO page_elements VALUES (?)",
+                (new_page,)
+            )
+
+            conn.commit()
+
+            st.success("등록 완료")
+            st.rerun()
+
+    elif menu == "시스템 설정":
+
+        st.subheader("시스템 설정")
+
+        config_df = pd.read_sql(
+            "SELECT * FROM system_config",
+            conn
+        )
+
+        st.dataframe(config_df, use_container_width=True)
+
+    elif menu == "비밀번호 변경":
+
+        st.session_state["page_state"] = "change_password"
+        st.rerun()
+
+    elif menu == "로그아웃":
+
+        st.session_state["current_user"] = ""
+        change_page_and_clear_inputs("login")
+
+    conn.close()
