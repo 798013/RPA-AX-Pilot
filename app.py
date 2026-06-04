@@ -218,24 +218,3 @@ elif st.session_state["page_state"] == "main_dashboard":
     st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
     
     # 💡 요구사항 2번: 왼쪽 트리 메뉴(사이드바) 구성 최적화 및 고정 로그아웃 버튼 생성
-
-# --- 화면 6: 관리자 설정 (신규 추가) ---
-elif st.session_state["page_state"] == "admin_settings":
-    st.title("⚙️ 시스템 환경 설정")
-    if st.session_state["current_user"] != "admin":
-        st.warning("관리자 권한이 없습니다.")
-    else:
-        conn = sqlite3.connect("rpa_management.db")
-        configs = pd.read_sql("SELECT * FROM system_config", conn)
-        
-        with st.form("config_form"):
-            new_smtp = st.text_input("SMTP 서버 주소", configs.loc[configs['config_key']=='SMTP_SERVER', 'config_value'].values[0])
-            new_api = st.text_input("이메일 API KEY", configs.loc[configs['config_key']=='EMAIL_API_KEY', 'config_value'].values[0])
-            if st.form_submit_button("설정 저장"):
-                cursor = conn.cursor()
-                cursor.execute("UPDATE system_config SET config_value = ? WHERE config_key = 'SMTP_SERVER'", (new_smtp,))
-                cursor.execute("UPDATE system_config SET config_value = ? WHERE config_key = 'EMAIL_API_KEY'", (new_api,))
-                conn.commit()
-                st.success("환경 설정이 저장되었습니다.")
-        
-    if st.button("⬅️ 대시보드로 복귀"): change_page_and_clear_inputs("main_dashboard")
