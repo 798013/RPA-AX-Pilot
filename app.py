@@ -189,13 +189,14 @@ elif st.session_state["page_state"] == "find_account":
             result = cursor.fetchone()
             
             if result:
-                target_user_id = result
-                
-                # 무작위 8자리 안전한 임시 비밀번호 조합 생성
+                # 💡 [핵심 해결] 튜플 형태인 ('admin',)에서 첫 번째 값만 깨끗하게 문자열로 꺼내옵니다.
+                target_user_id = result[0] 
+            
+                # 안전한 랜덤 임시 비밀번호 8자리 구워내기
                 alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
                 temp_password = "".join(secrets.choice(alphabet) for _ in range(8))
-                
-                # 새 비밀번호 DB 업데이트 반영
+            
+                # 새 비밀번호 DB 업데이트 반영 (이제 에러가 나지 않습니다)
                 cursor.execute("""
                     UPDATE user_master 
                     SET user_pw = ? 
@@ -203,10 +204,10 @@ elif st.session_state["page_state"] == "find_account":
                 """, (temp_password, target_user_id))
                 conn.commit()
                 conn.close()
-                
+            
                 # API 전송 트리거 구동
                 send_temporary_pw_email_api(input_email, input_name, target_user_id, temp_password)
-                
+            
                 # UI 문구 고도화 매핑
                 st.success("🎯 회원 정보 일치가 확인되었습니다!\n\n입력하신 이메일 주소로 임시비밀번호를 발송해드렸습니다.")
             else:
