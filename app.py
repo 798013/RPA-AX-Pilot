@@ -10,27 +10,28 @@ import requests
 
 # --- 수정된 네비게이션 및 헤더 영역 ---
 def render_navigation():
-    # 1. 반응형 헤더 (버튼 그룹을 우측으로 정렬)
-    # col1은 왼쪽 빈 공간, col2는 버튼 영역
-    col1, col2 = st.columns([7, 3]) 
-    
-    with col2:
-        # 2. 버튼들을 3분할하여 컴팩트하게 배치
-        b1, b2, b3 = st.columns(3)
-        with b1:
-            if st.button("⬅️", help="뒤로가기"):
-                st.session_state["page_state"] = "main_dashboard"
-                st.rerun()
-        with b2:
-            if st.button("⚙️", help="설정"):
-                st.session_state["page_state"] = "change_password"
-                st.rerun()
-        with b3:
-            if st.button("🚪", help="로그아웃"):
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
-                st.session_state["page_state"] = "login"
-                st.rerun()
+    # 상단 여백 제거를 위해 컨테이너 사용
+    with st.container():
+        # 버튼을 나란히 배치하기 위해 수평으로 정렬
+        col1, col2 = st.columns([8, 2]) # 버튼들을 오른쪽으로 밀기
+        with col2:
+            # 💡 이 부분이 핵심입니다. columns를 쓰지 않고 버튼을 배치하면 
+            # Streamlit이 자동으로 붙여서 그려줍니다.
+            c1, c2, c3 = st.columns([1, 1, 1]) 
+            with c1:
+                if st.button("⬅️", help="뒤로가기"):
+                    st.session_state["page_state"] = "main_dashboard"
+                    st.rerun()
+            with c2:
+                if st.button("⚙️", help="설정"):
+                    st.session_state["page_state"] = "change_password"
+                    st.rerun()
+            with c3:
+                if st.button("🚪", help="로그아웃"):
+                    for key in list(st.session_state.keys()):
+                        del st.session_state[key]
+                    st.session_state["page_state"] = "login"
+                    st.rerun()
     st.divider()
 
 def init_db():
@@ -242,7 +243,14 @@ elif st.session_state["page_state"] == "login":
 elif st.session_state["page_state"] == "main_dashboard":
     st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
     render_navigation()
-    st.markdown("<h3 style='margin-top: -20px;'>등록 내역 검색</h3>", unsafe_allow_html=True)
+    
+    # 제목 크기 축소 및 버튼과의 간격 조정
+    st.markdown("""
+        <style>
+        .header-text { margin-top: -50px; font-size: 20px; font-weight: bold; }
+        </style>
+        <div class="header-text">등록 내역 검색</div>
+    """, unsafe_allow_html=True)
     
 # --- 메인 : 설정 ---
 elif st.session_state["page_state"] == "change_password":
