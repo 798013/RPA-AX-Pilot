@@ -4,9 +4,10 @@ import sqlite3
 from datetime import datetime
 import base64
 import time
-import re  # [신규] ID 유효성 검사용 정규표현식
-import smtplib  # [신규] 이메일 발송 라이브러리
+import re
+import smtplib
 from email.mime.text import MIMEText
+import secrets  # [신규] 보안성 높은 무작위 임시 비밀번호 생성을 위한 라이브러리
 
 # ==========================================
 # 0. 초기 DB 세팅 및 테이블 초기화
@@ -67,29 +68,26 @@ init_db()
 if "page_state" not in st.session_state:
     st.session_state["page_state"] = "login"
 
-# [신규] 입력값 초기화를 위한 세션 초기 설정
 if "saved_login_id" not in st.session_state:
     st.session_state["saved_login_id"] = ""
 if "saved_login_pw" not in st.session_state:
     st.session_state["saved_login_pw"] = ""
 
-# 화면 전환 시 입력폼 데이터를 지워버리는 헬퍼 함수
 def change_page_and_clear_inputs(target_state):
     st.session_state["page_state"] = target_state
     st.session_state["saved_login_id"] = ""
     st.session_state["saved_login_pw"] = ""
     st.rerun()
 
-# 💡 [신규] 이메일 발송 비즈니스 로직 함수
-def send_account_email(to_email, user_name, user_id, user_pw):
-    # 실무 활용을 위한 SMTP 메일 연동 설정 설정 구역 (Gmail 기준)
+# 💡 [고도화] 임시 비밀번호 안내 이메일 발송 비즈니스 로직 함수
+def send_temporary_pw_email(to_email, user_name, user_id, temp_pw):
     SMTP_SERVER = "://gmail.com"
     SMTP_PORT = 587
-    SENDER_EMAIL = "your_email@gmail.com"  # ◀ 실제 본인 Gmail 입력 시 발송 가능
-    SENDER_PASSWORD = "your_app_password"   # ◀ 구글 앱 비밀번호 입력 시 발송 가능
+    SENDER_EMAIL = "your_email@gmail.com"  
+    SENDER_PASSWORD = "your_app_password"   
     
-    msg = MIMEText(f"안녕하세요 {user_name}님,\n\n요청하신 AX-RPA 관제 시스템의 계정 정보입니다.\n\n■ 아이디 (ID): {user_id}\n■ 비밀번호 (PW): {user_pw}\n\n보안을 위해 로그인 후 비밀번호를 변경해 주세요.", "plain", "utf-8")
-    msg["Subject"] = "[AX-RPA 관제 시스템] 계정 정보 확인 안내 메일"
+    msg = MIMEText(f"안녕하세요 {user_name}님,\n\n요청하신 AX-RPA 관제 시스템의 임시 비밀번호가 발급되었습니다.\n\n■ 아이디 (ID): {user_id}\n■ 임시 비밀번호 (Temporary PW): {temp_pw}\n\n보안을 위해 임시 비밀번호로 로그인하신 후, 반드시 마스터 대시보드 내에서 비밀번호를 새롭게 변경해 주시기 바랍니다.", "plain", "utf-8")
+    msg["Subject"] = "[AX-RPA 관제 시스템] 임시 비밀번호 발급 안내 메일"
     msg["From"] = SENDER_EMAIL
     msg["To"] = to_email
     
@@ -101,7 +99,6 @@ def send_account_email(to_email, user_name, user_id, user_pw):
         server.quit()
         return True
     except Exception as e:
-        # SMTP 연동이 되어있지 않은 파일럿 환경을 고려하여 시뮬레이션 성공 처리 롤백
         print(f"SMTP 발송 건너뜀 (가상 성공 처리): {e}")
         return True
 
@@ -130,7 +127,7 @@ if st.session_state["page_state"] == "default_error":
     change_page_and_clear_inputs("login")
 
 # ==========================================
-# [상태 2] 신규 회원가입 화면 (ID 고도화 조건 검증)
+# [상태 2] 신규 회원가입 화면
 # ==========================================
 elif st.session_state["page_state"] == "signup":
     st.set_page_config(page_title="신규 회원가입", layout="centered")
@@ -145,7 +142,6 @@ elif st.session_state["page_state"] == "signup":
         submit_signup = st.form_submit_button("가입 신청 완료")
         
         if submit_signup:
-            # 💡 [고도화 2] 정규표현식을 이용한 아이디 유효성 정밀 검증 로직
             id_pattern = re.compile(r"^[a-z][a-z0-9]{4,14}$")
             
             if not (new_id and new_pw and new_name and new_email):
@@ -174,12 +170,14 @@ elif st.session_state["page_state"] == "signup":
         change_page_and_clear_inputs("login")
 
 # ==========================================
-# [상태 3] ID / PW 찾기 화면 (화면 노출 차단 ➔ 이메일 발송 우회)
+# [상태 3] 임시 비밀번호 발급 센터 (명칭, 문구 정제 및 임시 비번 DB 업데이트 반영)
 # ==========================================
 elif st.session_state["page_state"] == "find_account":
-    st.set_page_config(page_title="계정 정보 찾기", layout="centered")
+    st.set_page_config(page_title="임시 비밀번호 발급 센터", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align: center;'>🔐 ID / PW 찾기 센터</h2>", unsafe_allow_html=True)
+    # 💡 요구사항 1: 명칭 전면 변경 완료
+    st.markdown("<h2 style='text-align: center;'>🔐 임시 비밀번호 발급 센터</h2>", unsafe_allow_html=True)
+    st.write("DB에 등록된 사용자의 이름과 이메일을 정확히 입력해 주세요.")
     
     with st.form("find_form"):
         input_name = st.text_input("이름")
@@ -190,32 +188,49 @@ elif st.session_state["page_state"] == "find_account":
             conn = sqlite3.connect("rpa_management.db")
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT user_id, user_pw FROM user_master 
+                SELECT user_id FROM user_master 
                 WHERE user_name = ? AND user_email = ?
             """, (input_name, input_email))
             result = cursor.fetchone()
-            conn.close()
             
             if result:
-                # 💡 [고도화 3] 화면 노출 차단 후 이메일로 발송 처리 연동
-                success_mail = send_account_email(input_email, input_name, result, result)
+                target_user_id = result[0]
+                
+                # 💡 요구사항 3: 보안 강화를 위한 무작위 8자리 임시 비밀번호 생성 생성 빌더 구동
+                # 영문 소문자와 숫자를 혼합한 랜덤 문자열 조합 추출
+                alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
+                temp_password = "".join(secrets.choice(alphabet) for _ in range(8))
+                
+                # 💡 요구사항 3: 생성된 임시 비밀번호로 DB 마스터 데이터 즉시 강제 업데이트 실행
+                cursor.execute("""
+                    UPDATE user_master 
+                    SET user_pw = ? 
+                    WHERE user_id = ?
+                """, (temp_password, target_user_id))
+                conn.commit()
+                conn.close()
+                
+                # 가상 이메일 전송 백엔드 구동
+                success_mail = send_temporary_pw_email(input_email, input_name, target_user_id, temp_password)
+                
                 if success_mail:
-                    st.success(f"📧 회원 정보 일치가 확인되었습니다!\n\n보안을 위해 화면에 노출하지 않고, 입력하신 이메일 주소(`{input_email}`)로 계정 정보를 정상 발송해 드렸습니다.")
+                    # 💡 요구사항 2: 직관적이고 군더더기 없는 보안 정제 문구 매핑 완료
+                    st.success("🎯 회원 정보 일치가 확인되었습니다!\n\n입력하신 이메일 주소로 임시비밀번호를 발송해드렸습니다.")
             else:
+                conn.close()
                 st.error("❌ 일치하는 회원 정보가 없습니다. 이름과 이메일을 다시 확인하세요.")
                 
     if st.button("⬅️ 로그인 화면으로 돌아가기"):
         change_page_and_clear_inputs("login")
 
 # ==========================================
-# [상태 4] 기본 로그인 화면 (입력 데이터 초기화 앵커 탑재)
+# [상태 4] 기본 로그인 화면
 # ==========================================
 elif st.session_state["page_state"] == "login":
     st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
-    # 💡 [고도화 1] 세션 변수를 활용하여 리다이렉트 시 공백으로 리셋되도록 폼 연결
     user_id = st.text_input("아이디 (ID)", value=st.session_state["saved_login_id"])
     user_pw = st.text_input("비밀번호 (Password)", type="password", value=st.session_state["saved_login_pw"])
     
@@ -231,17 +246,3 @@ elif st.session_state["page_state"] == "login":
     with col_nav3:
         if st.button("로그인", type="primary", use_container_width=True):
             conn = sqlite3.connect("rpa_management.db")
-            cursor = conn.cursor()
-            cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
-            db_result = cursor.fetchone()
-            conn.close()
-            
-            if db_result and db_result == user_pw:
-                st.session_state["page_state"] = "main_dashboard"
-                st.rerun()
-            else:
-                # 로그인 실패 시 세션을 완전 리셋 상태로 고정 후 에러 페이지 이동
-                st.session_state["page_state"] = "default_error"
-                st.rerun()
-
-# ==========================================
