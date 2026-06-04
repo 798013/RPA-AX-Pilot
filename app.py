@@ -132,7 +132,7 @@ if st.session_state["page_state"] == "default_error":
     change_page_and_clear_inputs("login")
 
 # ==========================================
-# [상태 2] 신규 회원가입 화면 (이메일 필수 입력 제한 고도화)
+# [상태 2] 신규 회원가입 화면
 # ==========================================
 elif st.session_state["page_state"] == "signup":
     st.set_page_config(page_title="신규 회원가입", layout="centered")
@@ -148,16 +148,14 @@ elif st.session_state["page_state"] == "signup":
         
         if submit_signup:
             id_pattern = re.compile(r"^[a-z][a-z0-9]{4,14}$")
-            # 이메일 표준 형식 조회를 위한 정규표현식 추가
             email_pattern = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
             
-            # 💡 요구사항 2: 이메일 주소 필수 검증 및 형식 제한 체크 로직 연동
             if not (new_id and new_pw and new_name and new_email):
                 st.error("⚠️ 모든 칸을 정확하게 입력해 주세요. (이메일 주소는 필수 항목입니다.)")
             elif not id_pattern.match(new_id):
                 st.error("❌ 아이디 규칙 위반:\n1. 5자 이상 15자 이하만 가능합니다.\n2. 첫 글자는 반드시 영문 소문자여야 합니다.\n3. 영문 소문자와 숫자 조합만 사용할 수 있습니다. (한글, 특수문자 금지)")
             elif not email_pattern.match(new_email):
-                st.error("❌ 이메일 형식 오류: 올바른 이메일 규격(예: user@sictglobal.com)으로 다시 입력해 주세요.")
+                st.error("❌ 이메일 형식 오류: 올바른 이메일 규격으로 다시 입력해 주세요.")
             else:
                 conn = sqlite3.connect("rpa_management.db")
                 cursor = conn.cursor()
@@ -168,7 +166,7 @@ elif st.session_state["page_state"] == "signup":
                 else:
                     cursor.execute("""
                         INSERT INTO user_master (user_id, user_pw, user_name, user_email)
-                        VALUES (?, ?, ?)
+                        VALUES (?, ?, ?, ?)
                     """, (new_id, new_pw, new_name, new_email))
                     conn.commit()
                     conn.close()
@@ -180,7 +178,7 @@ elif st.session_state["page_state"] == "signup":
         change_page_and_clear_inputs("login")
 
 # ==========================================
-# [상태 3] ID / PW 찾기 화면 (사용자 이름 ➔ ID 조회 기반으로 전면 변경)
+# [상태 3] ID / PW 찾기 화면 (ID 기준 전면 변경 및 튜플 디코딩 반영)
 # ==========================================
 elif st.session_state["page_state"] == "find_account":
     st.set_page_config(page_title="ID / PW 찾기", layout="centered")
@@ -188,7 +186,6 @@ elif st.session_state["page_state"] == "find_account":
     st.markdown("<h2 style='text-align: center;'>🔐 ID / PW 찾기</h2>", unsafe_allow_html=True)
     
     with st.form("find_form"):
-        # 💡 요구사항 1: 기존 '이름' 인풋 박스를 '아이디 (ID)' 박스로 전면 개편 완료
         input_id = st.text_input("아이디 (ID)")
         input_email = st.text_input("이메일 주소")
         submit_find = st.form_submit_button("🔍 정보 확인")
@@ -196,7 +193,6 @@ elif st.session_state["page_state"] == "find_account":
         if submit_find:
             conn = sqlite3.connect("rpa_management.db")
             cursor = conn.cursor()
-            # 💡 요구사항 1: 이름 대신 ID와 이메일을 매칭하도록 SQL Select 쿼리 구조 변경
             cursor.execute("""
                 SELECT user_id, user_name FROM user_master 
                 WHERE user_id = ? AND user_email = ?
@@ -204,15 +200,13 @@ elif st.session_state["page_state"] == "find_account":
             result = cursor.fetchone()
             
             if result:
-                # 💡 ProgrammingError 방지를 위한 순수 문자열 매핑 완료
-                target_user_id = result[0]
-                target_user_name = result[1]
+                # 💡 튜플 구조 분해로 문자열 데이터 추출 에러 원천 차단
+                target_user_id = result
+                target_user_name = result
                 
-                # 무작위 8자리 안전한 임시 비밀번호 조합 생성
                 alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
                 temp_password = "".join(secrets.choice(alphabet) for _ in range(8))
                 
-                # 새 비밀번호 DB 업데이트 반영 (트랜잭션 즉시 강제 커밋)
                 cursor.execute("""
                     UPDATE user_master 
                     SET user_pw = ? 
@@ -221,10 +215,7 @@ elif st.session_state["page_state"] == "find_account":
                 conn.commit()
                 conn.close()
                 
-                # API 전송 트리거 구동 (수신자 이름 매핑 완료)
                 send_temporary_pw_email_api(input_email, target_user_name, target_user_id, temp_password)
-                
-                # UI 문구 고도화 매핑
                 st.success("🎯 회원 정보 일치가 확인되었습니다!\n\n입력하신 이메일 주소로 임시비밀번호를 발송해드렸습니다.")
                 
                 with st.expander("💡 [테스트 안내] 메일이 차단되거나 지연될 경우 확인용"):
@@ -245,3 +236,15 @@ elif st.session_state["page_state"] == "login":
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
     user_id = st.text_input("아이디 (ID)", value=st.session_state["saved_login_id"])
+    user_pw = st.text_input("비밀번호 (Password)", type="password", value=st.session_state["saved_login_pw"])
+    
+    st.write("")
+    
+    col_nav1, col_nav2, col_nav3 = st.columns(3)
+    with col_nav1:
+        if st.button("ID / PW 찾기", use_container_width=True):
+            change_page_and_clear_inputs("find_account")
+    with col_nav2:
+        if st.button("회원 가입", use_container_width=True):
+            change_page_and_clear_inputs("signup")
+    with col_nav3:
