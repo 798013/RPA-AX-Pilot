@@ -8,9 +8,6 @@ import re
 import secrets
 import requests
 
-# ==========================================
-# 0. 데이터베이스(SQLite) 인프라 초기화
-# ==========================================
 def init_db():
     conn = sqlite3.connect("rpa_management.db")
     cursor = conn.cursor()
@@ -26,7 +23,6 @@ def init_db():
             element_purpose TEXT, broken_selector TEXT, fixed_selector TEXT, status TEXT
         )
     """)
-    # 💡 [고도화 2] 인프라 환경설정 정보를 영구 저장할 시스템 테이블 추가
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS system_config (
             config_key TEXT PRIMARY KEY, config_value TEXT
@@ -36,7 +32,15 @@ def init_db():
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('국토부_실거래가')")
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('상권정보_포털')")
     
-    # 💡 [어드민 기본값 세팅] SMTP 및 DB 기본 접속 정보를 안전하게 인서트
+    # 💡 기본 감시 데이터가 비어있을 경우에만 최초 1회 자동 생성 프로시저 가동
+    cursor.execute("SELECT COUNT(*) FROM selector_healing_logs")
+    if cursor.fetchone()[0] == 0:
+        for i in range(1, 151):
+            cursor.execute("""
+                INSERT INTO selector_healing_logs (user_id, log_date, page_name, element_purpose, broken_selector, fixed_selector, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, ("admin", "2026-06-04", "국토부_실거래가" if i%2==0 else "상권정보_포털", "조회_버튼", f"button#old_id_{i}", f"div.new_class_{i} > button", "AI_추천완료"))
+            
     cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('SMTP_SERVER', '://gmail.com')")
     cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('SMTP_PORT', '587')")
     cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('DB_PATH', 'rpa_management.db')")
@@ -45,9 +49,6 @@ def init_db():
     conn.close()
 
 init_db()
-
-# 💡 요구사항 1번: 150건의 지저분한 Default 더미 데이터를 생성하던 강제 삽입 로직을 완벽히 삭제했습니다.
-# 이제 시스템 구동 시 첫 화면이 깨끗하게 유지됩니다.
 
 if "page_state" not in st.session_state:
     st.session_state["page_state"] = "login"
@@ -117,9 +118,8 @@ elif st.session_state["page_state"] == "signup":
         if submit_signup:
             id_pattern = re.compile(r"^[a-z][a-z0-9]{4,14}$")
             email_pattern = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
-            
             if not (new_id and new_pw and new_name and new_email):
-                st.error("⚠️ 모든 칸을 정확하게 입력해 주세요. (이메일 주소는 필수 항목입니다.)")
+                st.error("⚠️ 모든 칸을 정확하게 입력해 주세요.")
             elif not id_pattern.match(new_id):
                 st.error("❌ 아이디 규칙 위반: 5~15자 영문 소문자 시작, 영문 소문자+숫자 조합만 가능.")
             elif not email_pattern.match(new_email):
@@ -213,13 +213,8 @@ elif st.session_state["page_state"] == "login":
                 st.session_state["page_state"] = "default_error"
                 st.rerun()
 
-# --- 화면 5: 메인 관제 대시보드 (어드민 환경설정 연동 버전) ---
+# --- 화면 5: 메인 관제 대시보드 ---
 elif st.session_state["page_state"] == "main_dashboard":
     st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
     
-    # 💡 [고도화 2] 오직 최고 관리자(admin) 계정으로 접근했을 때만 사이드바에 어드민 설정 메뉴 오픈
-    admin_menu = "📊 메인 관제 콘솔"
-    if st.session_state["current_user"] == "admin":
-        admin_menu = st.sidebar.radio("⚙️ 마스터 시스템 관리", ["📊 메인 관제 콘솔", "🛠️ 인프라 환경설정 (Admin)"])
-
-    # ----------------------------------------
+    # 💡 요구사항 2번: 왼쪽 트리 메뉴(사이드바) 구성 최적화 및 고정 로그아웃 버튼 생성
