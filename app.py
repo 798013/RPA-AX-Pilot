@@ -120,7 +120,7 @@ except:
     logo_html = "<h3 style='text-align: center; color: #1E3A8A;'>🏢 SICT 로고 구역 (SICT.png 파일 없음)</h3>"
 
 # ==========================================
-# [상태 1] 로그인 실패용 Default Page (경고 후 자동 리다이렉트)
+# [상태 1] 로그인 실패용 Default Page
 # ==========================================
 if st.session_state["page_state"] == "default_error":
     st.set_page_config(page_title="접근 차단됨", layout="centered")
@@ -132,7 +132,7 @@ if st.session_state["page_state"] == "default_error":
     change_page_and_clear_inputs("login")
 
 # ==========================================
-# [상태 2] 신규 회원가입 화면 (ID 고도화 조건 검증)
+# [상태 2] 신규 회원가입 화면 (이메일 필수 입력 제한 고도화)
 # ==========================================
 elif st.session_state["page_state"] == "signup":
     st.set_page_config(page_title="신규 회원가입", layout="centered")
@@ -143,16 +143,21 @@ elif st.session_state["page_state"] == "signup":
         new_id = st.text_input("사용할 아이디 (ID)", placeholder="5~15자, 영문 소문자로 시작하는 영문+숫자 조합")
         new_pw = st.text_input("비밀번호 (Password)", type="password")
         new_name = st.text_input("사용자 이름")
-        new_email = st.text_input("이메일 주소")
+        new_email = st.text_input("이메일 주소 (필수 입력)", placeholder="example@sictglobal.com")
         submit_signup = st.form_submit_button("가입 신청 완료")
         
         if submit_signup:
             id_pattern = re.compile(r"^[a-z][a-z0-9]{4,14}$")
+            # 이메일 표준 형식 조회를 위한 정규표현식 추가
+            email_pattern = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
             
+            # 💡 요구사항 2: 이메일 주소 필수 검증 및 형식 제한 체크 로직 연동
             if not (new_id and new_pw and new_name and new_email):
-                st.error("⚠️ 모든 칸을 정확하게 입력해 주세요.")
+                st.error("⚠️ 모든 칸을 정확하게 입력해 주세요. (이메일 주소는 필수 항목입니다.)")
             elif not id_pattern.match(new_id):
                 st.error("❌ 아이디 규칙 위반:\n1. 5자 이상 15자 이하만 가능합니다.\n2. 첫 글자는 반드시 영문 소문자여야 합니다.\n3. 영문 소문자와 숫자 조합만 사용할 수 있습니다. (한글, 특수문자 금지)")
+            elif not email_pattern.match(new_email):
+                st.error("❌ 이메일 형식 오류: 올바른 이메일 규격(예: user@sictglobal.com)으로 다시 입력해 주세요.")
             else:
                 conn = sqlite3.connect("rpa_management.db")
                 cursor = conn.cursor()
@@ -163,7 +168,7 @@ elif st.session_state["page_state"] == "signup":
                 else:
                     cursor.execute("""
                         INSERT INTO user_master (user_id, user_pw, user_name, user_email)
-                        VALUES (?, ?, ?, ?)
+                        VALUES (?, ?, ?)
                     """, (new_id, new_pw, new_name, new_email))
                     conn.commit()
                     conn.close()
@@ -175,7 +180,7 @@ elif st.session_state["page_state"] == "signup":
         change_page_and_clear_inputs("login")
 
 # ==========================================
-# [상태 3] ID / PW 찾기 화면 (임시비밀번호 즉시 갱신 및 UI 정제)
+# [상태 3] ID / PW 찾기 화면 (사용자 이름 ➔ ID 조회 기반으로 전면 변경)
 # ==========================================
 elif st.session_state["page_state"] == "find_account":
     st.set_page_config(page_title="ID / PW 찾기", layout="centered")
@@ -183,28 +188,31 @@ elif st.session_state["page_state"] == "find_account":
     st.markdown("<h2 style='text-align: center;'>🔐 ID / PW 찾기</h2>", unsafe_allow_html=True)
     
     with st.form("find_form"):
-        input_name = st.text_input("이름")
+        # 💡 요구사항 1: 기존 '이름' 인풋 박스를 '아이디 (ID)' 박스로 전면 개편 완료
+        input_id = st.text_input("아이디 (ID)")
         input_email = st.text_input("이메일 주소")
         submit_find = st.form_submit_button("🔍 정보 확인")
         
         if submit_find:
             conn = sqlite3.connect("rpa_management.db")
             cursor = conn.cursor()
+            # 💡 요구사항 1: 이름 대신 ID와 이메일을 매칭하도록 SQL Select 쿼리 구조 변경
             cursor.execute("""
-                SELECT user_id FROM user_master 
-                WHERE user_name = ? AND user_email = ?
-            """, (input_name, input_email))
+                SELECT user_id, user_name FROM user_master 
+                WHERE user_id = ? AND user_email = ?
+            """, (input_id, input_email))
             result = cursor.fetchone()
             
             if result:
-                # 💡 [에러 해결 원천 마스터 키] 튜플 데이터의 첫 번째 원소인 'admin' 문자열만 정확히 슬라이싱해옵니다!
+                # 💡 ProgrammingError 방지를 위한 순수 문자열 매핑 완료
                 target_user_id = result[0]
+                target_user_name = result[1]
                 
-                # 안전한 랜덤 임시 비밀번호 8자리 조합 빌드
+                # 무작위 8자리 안전한 임시 비밀번호 조합 생성
                 alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
                 temp_password = "".join(secrets.choice(alphabet) for _ in range(8))
                 
-                # 순수 문자열 변수를 주입하여 DB 업데이트 트랜잭션 강제 반영
+                # 새 비밀번호 DB 업데이트 반영 (트랜잭션 즉시 강제 커밋)
                 cursor.execute("""
                     UPDATE user_master 
                     SET user_pw = ? 
@@ -213,24 +221,23 @@ elif st.session_state["page_state"] == "find_account":
                 conn.commit()
                 conn.close()
                 
-                # API 전송 트리거 구동
-                send_temporary_pw_email_api(input_email, input_name, target_user_id, temp_password)
+                # API 전송 트리거 구동 (수신자 이름 매핑 완료)
+                send_temporary_pw_email_api(input_email, target_user_name, target_user_id, temp_password)
                 
-                # UI 문구 전시
+                # UI 문구 고도화 매핑
                 st.success("🎯 회원 정보 일치가 확인되었습니다!\n\n입력하신 이메일 주소로 임시비밀번호를 발송해드렸습니다.")
                 
-                # 메일 차단/지연을 대비한 로컬 확인용 앵커 박스 제공
                 with st.expander("💡 [테스트 안내] 메일이 차단되거나 지연될 경우 확인용"):
                     st.info(f"현재 계정의 비밀번호가 DB상에서 **`{temp_password}`**로 실시간 즉시 업데이트되었습니다. 이 값으로 로그인 테스트를 진행하세요.")
             else:
                 conn.close()
-                st.error("❌ 일치하는 회원 정보가 없습니다. 이름과 이메일을 다시 확인하세요.")
+                st.error("❌ 일치하는 회원 정보가 없습니다. 아이디와 이메일을 다시 확인하세요.")
                 
     if st.button("⬅️ 로그인 화면으로 돌아가기"):
         change_page_and_clear_inputs("login")
 
 # ==========================================
-# [상태 4] 기본 로그인 화면 (Pilot 문구 전면 박멸)
+# [상태 4] 기본 로그인 화면
 # ==========================================
 elif st.session_state["page_state"] == "login":
     st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
@@ -238,29 +245,3 @@ elif st.session_state["page_state"] == "login":
     st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
     
     user_id = st.text_input("아이디 (ID)", value=st.session_state["saved_login_id"])
-    user_pw = st.text_input("비밀번호 (Password)", type="password", value=st.session_state["saved_login_pw"])
-    
-    st.write("")
-    
-    col_nav1, col_nav2, col_nav3 = st.columns(3)
-    with col_nav1:
-        if st.button("ID / PW 찾기", use_container_width=True):
-            change_page_and_clear_inputs("find_account")
-    with col_nav2:
-        if st.button("회원 가입", use_container_width=True):
-            change_page_and_clear_inputs("signup")
-    with col_nav3:
-        if st.button("로그인", type="primary", use_container_width=True):
-            # 💡 [보정 핵심] 이 아래 구역의 모든 들여쓰기를 if 문 안쪽으로 한 단계 더 밀어 넣었습니다.
-            conn = sqlite3.connect("rpa_management.db")
-            cursor = conn.cursor()
-            cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
-            db_result = cursor.fetchone()
-            conn.close()
-            
-            if db_result and db_result == user_pw:
-                st.session_state["page_state"] = "main_dashboard"
-                st.rerun()
-            else:
-                st.session_state["page_state"] = "default_error"
-                st.rerun()
