@@ -10,17 +10,24 @@ import requests
 
 # --- 수정된 네비게이션 및 헤더 영역 ---
 def render_navigation():
-    # CSS로 버튼들을 우측으로 붙이고 간격을 좁힙니다.
+    # .nav-container에 flex-direction: row를 명시하여 한 줄로 강제합니다.
     st.markdown("""
         <style>
-        .nav-container { display: flex; justify-content: flex-end; gap: 5px; margin-top: -20px; }
-        .stButton button { width: 40px !important; padding: 0 !important; }
+        .nav-container { 
+            display: flex !important; 
+            flex-direction: row !important; 
+            justify-content: flex-end !important; 
+            gap: 10px !important; 
+            margin-bottom: -10px !important;
+        }
+        /* 버튼 크기 제한 */
+        .stButton button { width: 40px !important; height: 40px !important; }
         </style>
     """, unsafe_allow_html=True)
 
     with st.container():
         st.markdown('<div class="nav-container">', unsafe_allow_html=True)
-        # 버튼을 나란히 배치
+        # 버튼을 <div> 안에 직접 배치
         if st.button("⬅️", help="뒤로가기"):
             st.session_state["page_state"] = "main_dashboard"
             st.rerun()
