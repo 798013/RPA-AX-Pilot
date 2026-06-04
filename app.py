@@ -217,21 +217,4 @@ elif st.session_state["page_state"] == "login":
 elif st.session_state["page_state"] == "main_dashboard":
     st.set_page_config(page_title="AX-RPA Selector 관제 콘솔", layout="wide")
     
-    # --- 메인 대시보드 상단 버튼 추가 ---
-col_main, col_btn = st.columns([8, 2])
-with col_btn:
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("설정"):
-            st.session_state["page_state"] = "change_password"
-            st.rerun()
-    with c2:
-        if st.button("로그아웃"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.session_state["page_state"] = "login"
-            st.session_state["login_id_key"] = 0
-            st.session_state["login_pw_key"] = 0
-            st.rerun()
-st.divider()
     # 💡 요구사항 2번: 왼쪽 트리 메뉴(사이드바) 구성 최적화 및 고정 로그아웃 버튼 생성
