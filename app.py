@@ -223,3 +223,55 @@ elif st.session_state["page_state"] == "main_dashboard":
     with col2:
         search_date = st.date_input("조회 일자", datetime.now())
     with col3:
+        # 💡 [보정 핵심] 이 아래 조건문들의 모든 들여쓰기를 정밀하게 일렬 정렬했습니다.
+        search_page = st.selectbox("대상 Web Page (DB 연동)", options=page_options)
+    with col4:
+        limit_count = st.selectbox("조회 데이터 제한 (Grid Count)", options=, index=0)
+    with col5:
+        page_num = st.selectbox("페이지 선택 (Pagination)", options=, index=0)
+
+    search_submitted = st.button("🚀 조건 조회", type="primary")
+
+    if search_submitted or "current_data" in st.session_state:
+        st.markdown("---")
+        st.subheader("📊 Selector 매칭 및 치유 이력 (Grid)")
+        
+        offset_value = limit_count * (page_num - 1)
+        
+        conn = sqlite3.connect("rpa_management.db")
+        query = """
+            SELECT log_id, user_id, log_date, page_name, element_purpose, broken_selector, fixed_selector, status
+            FROM selector_healing_logs WHERE page_name = ? LIMIT ? OFFSET ?
+        """
+        df = pd.read_sql_query(query, conn, params=(search_page, limit_count, offset_value))
+        conn.close()
+
+        if not df.empty:
+            st.success(f"🎯 {len(df)}건의 데이터를 조회했습니다. (선택된 페이지: {page_num}번 구간)")
+            
+            towrite = pd.ExcelWriter('rpa_selector_logs.xlsx', engine='xlsxwriter')
+            df.to_excel(towrite, index=False, sheet_name='Sheet1')
+            towrite.close()
+            
+            with open('rpa_selector_logs.xlsx', 'rb') as f:
+                st.download_button(label="📥 엑셀 내려받기", data=f, file_name=f"RPA_Logs_Page_{page_num}.xlsx", mime="application/vnd.ms-excel")
+            
+            st.info("💡 정보 수정 안내: 아래 그리드에서 'fixed_selector' 칸을 더블클릭하여 수정 후 아래 버튼을 누르세요.")
+            
+            edited_df = st.data_editor(
+                df, num_rows="dynamic", use_container_width=True,
+                disabled=["log_id", "user_id", "log_date", "page_name", "element_purpose", "broken_selector"]
+            )
+            
+            if st.button("💾 수정 내용 DB 반영 (Update RAG)"):
+                conn = sqlite3.connect("rpa_management.db")
+                cursor = conn.cursor()
+                for index, row in edited_df.iterrows():
+                    cursor.execute("""
+                        UPDATE selector_healing_logs SET fixed_selector = ?, status = '정밀보정완료' WHERE log_id = ?
+                    """, (row['fixed_selector'], row['log_id']))
+                conn.commit()
+                conn.close()
+                st.toast("🎉 수정 사항이 데이터베이스에 실시간 업데이트되었습니다!", icon="✅")
+        else:
+            st.warning("조회 조건에 일치하는 데이터가 현재 페이지 구간에 존재하지 않습니다.")
