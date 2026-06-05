@@ -428,7 +428,7 @@ elif st.session_state["page_state"] == "main_dashboard":
             params.append(current_user)
             
         # 전체 데이터 조회
-        full_df = pd.read_sql(query + " ORDER BY log_id DESC", conn, params=params)
+        full_df = pd.read_sql(query + " ORDER BY 1 DESC", conn, params=params)
 
         # 4. 결과 처리 (페이징 반영)
         if full_df.empty:
@@ -517,7 +517,7 @@ elif st.session_state["page_state"] == "main_dashboard":
             params.append(current_user)
             
         # 전체 데이터 조회
-        full_df = pd.read_sql(query + " ORDER BY log_id DESC", conn, params=params)
+        full_df = pd.read_sql(query + " ORDER BY 1 DESC", conn, params=params)
 
         # 4. 결과 처리 (페이징 반영)
         if full_df.empty:
@@ -586,7 +586,7 @@ elif st.session_state["page_state"] == "main_dashboard":
             params.append(current_user)
             
         # 전체 데이터 조회
-        full_df = pd.read_sql(query + " ORDER BY log_id DESC", conn, params=params)
+        full_df = pd.read_sql(query + " ORDER BY 1 DESC", conn, params=params)
 
         # 4. 결과 처리 (페이징 반영)
         if full_df.empty:
@@ -654,7 +654,7 @@ elif st.session_state["page_state"] == "main_dashboard":
             params.append(current_user)
             
         # 전체 데이터 조회
-        full_df = pd.read_sql(query + " ORDER BY log_id DESC", conn, params=params)
+        full_df = pd.read_sql(query + " ORDER BY 1 DESC", conn, params=params)
 
         # 4. 결과 처리 (페이징 반영)
         if full_df.empty:
