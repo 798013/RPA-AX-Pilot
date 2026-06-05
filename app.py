@@ -311,30 +311,22 @@ elif st.session_state["page_state"] == "main_dashboard":
     st.title("🤖 AX-RPA Selector 관제 콘솔")
 
     with st.sidebar:
-
-        st.success(
-            f"사용자 : {st.session_state['current_user']}"
-        )
-
-        menu = st.radio(
-            "메뉴 선택",
-            [
-                "Dashboard",
+        st.success(f"사용자 : {st.session_state['current_user']}")
         
-                "Healing 이력",
-                "Healing Monitor",
+        # 1. 권한 확인 (로그인 시 is_admin 정보가 세션에 있다고 가정)
+        is_admin = st.session_state.get("is_admin", "N") == "Y"
         
-                "Knowledge DB",
-                "AI Analysis Log",
+        # 2. 메뉴 리스트 정의
+        menu_options = ["Dashboard", "Healing 이력", "Healing Monitor", "Knowledge DB", "AI Analysis Log"]
         
-                "사용자 관리",
-                "페이지 관리",
-                "시스템 설정",
+        # 3. 관리자 전용 메뉴 추가
+        if is_admin:
+            menu_options.extend(["사용자 관리", "페이지 관리", "시스템 설정"])
+            
+        menu_options.extend(["비밀번호 변경", "로그아웃"])
         
-                "비밀번호 변경",
-                "로그아웃"
-            ]
-        )
+        # 4. 라디오 버튼 생성
+        menu = st.radio("메뉴 선택", menu_options)
 
     conn = sqlite3.connect("rpa_management.db")
 
