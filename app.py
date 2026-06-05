@@ -452,37 +452,60 @@ elif st.session_state["page_state"] == "main_dashboard":
 
         st.subheader("Selector Healing 이력")
 
-        # 1. 권한 및 데이터 준비
+        # 1. 권한 및 사용자 데이터 가져오기
         is_admin = st.session_state.get("is_admin", "N") == "Y"
         current_user = st.session_state.get("current_user", "")
-        user_list = ["전체"] + pd.read_sql("SELECT user_id FROM user_master", conn)["user_id"].tolist() if is_admin else [current_user]
+        
+        # 관리자일 경우 사용자 목록 전체 가져오기
+        if is_admin:
+            users_df = pd.read_sql("SELECT user_id FROM user_master", conn)
+            user_list = ["전체"] + users_df["user_id"].tolist()
+        else:
+            user_list = [current_user]
 
-        # 2. 조회 필터 영역
+        # 2. 조회 필터 배치 (5개 컬럼 정렬)
         col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 1, 1])
         with col1: search_date = st.date_input("날짜 선택", value=None)
-        with col2: search_page = st.selectbox("페이지 선택", ["전체"] + pd.read_sql("SELECT page_name FROM page_elements", conn)["page_name"].tolist())
+        with col2: 
+            pages = pd.read_sql("SELECT page_name FROM page_elements", conn)["page_name"].tolist()
+            search_page = st.selectbox("페이지 선택", ["전체"] + pages)
         with col3: search_user = st.selectbox("사용자 ID", user_list, disabled=(not is_admin))
         with col4: page_size = st.selectbox("건수", [50, 100, 150], index=0)
         with col5:
             st.markdown("<br>", unsafe_allow_html=True)
             search_btn = st.button("조회", use_container_width=True)
 
-        # 3. 데이터 조회 (전체 내역)
+        # 3. SQL 동적 구성
         query = "SELECT * FROM selector_healing_logs WHERE 1=1"
         params = []
-        # ... (생략: 기존 SQL 필터링 로직 동일) ...
-        
+        if search_date:
+            query += " AND log_date LIKE ?"
+            params.append(f"{search_date}%")
+        if search_page != "전체":
+            query += " AND page_name = ?"
+            params.append(search_page)
+        if is_admin and search_user != "전체":
+            query += " AND user_id = ?"
+            params.append(search_user)
+        elif not is_admin:
+            query += " AND user_id = ?"
+            params.append(current_user)
+            
+        # 전체 데이터 조회
         full_df = pd.read_sql(query + " ORDER BY log_id DESC", conn, params=params)
 
-        # 4. 결과 출력 및 버튼 구현
+        # 4. 결과 처리 (페이징 반영)
         if full_df.empty:
             st.warning("🔍 조회된 Healing 이력이 없습니다.")
             st.button("📥 엑셀 다운로드", disabled=True)
         else:
-            st.success(f"총 {len(full_df)}건이 조회되었습니다.")
-            st.dataframe(full_df.head(page_size), use_container_width=True)
+            # 화면에는 설정한 page_size만큼만 보여줌
+            display_df = full_df.head(page_size)
             
-            # 엑셀 다운로드 버튼 (누르는 순간 실행됨)
+            st.success(f"총 {len(full_df)}건 중 상위 {len(display_df)}건을 표시합니다.")
+            st.dataframe(display_df, use_container_width=True)
+            
+            # 5. 엑셀 다운로드 (전체 내역)
             import io
             buffer = io.BytesIO()
             full_df.to_excel(buffer, index=False, engine='openpyxl')
