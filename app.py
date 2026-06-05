@@ -498,16 +498,19 @@ elif st.session_state["page_state"] == "main_dashboard":
             st.success(f"총 {len(full_df)}건이 조회되었습니다.")
             st.dataframe(full_df.head(page_size), use_container_width=True)
             
-            # 5. 엑셀 다운로드 (전체 내역)
-            import io
+        # 엑셀 다운로드 부분 수정 예시
+        try:
+            import openpyxl # 임포트 확인
             buffer = io.BytesIO()
-            full_df.to_excel(buffer, index=False)
+            full_df.to_excel(buffer, index=False, engine='openpyxl') # engine 명시
             st.download_button(
                 label="📥 엑셀 다운로드 (전체 내역)",
                 data=buffer.getvalue(),
                 file_name="healing_logs.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+        except ImportError:
+            st.error("엑셀 생성을 위한 필수 라이브러리(openpyxl)가 설치되지 않았습니다.")
 
     elif menu == "페이지 관리":
 
