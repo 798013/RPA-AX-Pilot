@@ -13,7 +13,13 @@ def init_db():
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_master (
-            user_id TEXT PRIMARY KEY, user_pw TEXT NOT NULL, user_name TEXT NOT NULL, user_email TEXT NOT NULL
+            user_id TEXT PRIMARY KEY,
+            user_pw TEXT NOT NULL,
+            user_name TEXT NOT NULL,
+            user_email TEXT NOT NULL,
+            is_admin TEXT DEFAULT 'N',
+            force_pw_change TEXT DEFAULT 'N',
+            created_at TEXT
         )
     """)
     cursor.execute("CREATE TABLE IF NOT EXISTS page_elements (page_name TEXT UNIQUE)")
@@ -28,9 +34,53 @@ def init_db():
             config_key TEXT PRIMARY KEY, config_value TEXT
         )
     """)
-    cursor.execute("INSERT OR IGNORE INTO user_master VALUES ('admin', '1234', '홍길동', 'sict@sict.co.kr','N')")
+    cursor.execute("INSERT OR IGNORE INTO user_master VALUES ('admin','1234','홍길동','sict@sict.co.kr','Y','N',datetime('now'))"
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('국토부_실거래가')")
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('상권정보_포털')")
+
+    # element_context 테이블 추가
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS element_context (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_name TEXT,
+        element_purpose TEXT,
+        selector TEXT,
+        selector_type TEXT,
+        element_text TEXT,
+        dom_path TEXT,
+        outer_html TEXT,
+        success_count INTEGER DEFAULT 0,
+        created_at TEXT
+    )
+    """)
+                   
+    # 더미 데이터 생성
+    cursor.execute("""
+    INSERT OR IGNORE INTO element_context
+    (
+        page_name,
+        element_purpose,
+        selector,
+        selector_type,
+        element_text,
+        dom_path,
+        outer_html,
+        success_count,
+        created_at
+    )
+    VALUES
+    (
+        '국토부_실거래가',
+        '조회버튼',
+        'button.search',
+        'CSS',
+        '조회',
+        '/html/body/div/button',
+        '<button>조회</button>',
+        15,
+        datetime('now')
+    )
+    """)
     
     # 💡 기본 감시 데이터가 비어있을 경우에만 최초 1회 자동 생성 프로시저 가동
     cursor.execute("SELECT COUNT(*) FROM selector_healing_logs")
@@ -132,7 +182,7 @@ elif st.session_state["page_state"] == "signup":
                     st.error("❌ 이미 존재하는 아이디입니다. 다른 아이디를 입력하세요.")
                     conn.close()
                 else:
-                    cursor.execute("INSERT INTO user_master VALUES (?, ?, ?, ?)", (new_id, new_pw, new_name, new_email))
+                    cursor.execute("INSERT INTO user_master VALUES (user_id,user_pw,user_name,user_email,is_admin,force_pw_change,created_at)", (?,?,?,?,'N','N',?))
                     conn.commit()
                     conn.close()
                     st.success("🎉 회원가입이 정상적으로 완료되었습니다! 로그인 페이지로 이동합니다.")
@@ -201,11 +251,16 @@ elif st.session_state["page_state"] == "login":
         if st.button("로그인", type="primary", use_container_width=True):
             conn = sqlite3.connect("rpa_management.db")
             cursor = conn.cursor()
-            cursor.execute("SELECT user_pw FROM user_master WHERE user_id = ?", (user_id,))
+            cursor.execute("""SELECT user_pw,is_admin,force_pw_change FROM user_master WHERE user_id = ?""", (user_id,))
             db_result = cursor.fetchone()
             conn.close()
             
             if db_result and db_result[0] == user_pw:
+                st.session_state["is_admin"] = db_result[1]
+
+                if db_result[2] == "Y":
+                    st.session_state["page_state"] = "change_password"
+                    st.rerun()
                 st.session_state["page_state"] = "main_dashboard"
                 st.session_state["current_user"] = user_id
                 st.rerun()
@@ -234,9 +289,17 @@ elif st.session_state["page_state"] == "main_dashboard":
             "메뉴 선택",
             [
                 "Dashboard",
+        
                 "Healing 이력",
+                "Healing Monitor",
+        
+                "Knowledge DB",
+                "AI Analysis Log",
+        
+                "사용자 관리",
                 "페이지 관리",
                 "시스템 설정",
+        
                 "비밀번호 변경",
                 "로그아웃"
             ]
@@ -285,6 +348,71 @@ elif st.session_state["page_state"] == "main_dashboard":
         """, conn)
 
         st.dataframe(df, use_container_width=True)
+
+    # Knowledge DB 메뉴 추가
+    elif menu == "Knowledge DB":
+
+        st.subheader("Selector Knowledge DB")
+    
+        df = pd.read_sql("""
+            SELECT
+            page_name,
+            element_purpose,
+            selector_type,
+            success_count,
+            created_at
+            FROM element_context
+            ORDER BY success_count DESC
+        """, conn)
+    
+        st.dataframe(
+            df,
+            use_container_width=True
+        )
+
+    # 사용자 관리 메뉴 추가
+    elif menu == "사용자 관리":
+
+        st.subheader("사용자 관리")
+    
+        user_df = pd.read_sql("""
+            SELECT
+            user_id,
+            user_name,
+            user_email,
+            is_admin,
+            created_at
+            FROM user_master
+        """, conn)
+    
+        st.dataframe(
+            user_df,
+            use_container_width=True
+        )
+
+    # Healing Monitor 추
+    elif menu == "Healing Monitor":
+
+        st.subheader("Healing Request Monitor")
+    
+        monitor_df = pd.DataFrame({
+            "RequestID":[1001,1002,1003],
+            "Page":[
+                "국토부_실거래가",
+                "상권정보_포털",
+                "국토부_실거래가"
+            ],
+            "Status":[
+                "Searching",
+                "AI Analysis",
+                "Validation"
+            ]
+        })
+    
+        st.dataframe(
+            monitor_df,
+            use_container_width=True
+        )
 
     elif menu == "Healing 이력":
 
