@@ -182,7 +182,38 @@ elif st.session_state["page_state"] == "signup":
                     st.error("❌ 이미 존재하는 아이디입니다. 다른 아이디를 입력하세요.")
                     conn.close()
                 else:
-                    cursor.execute("INSERT INTO user_master VALUES (user_id,user_pw,user_name,user_email,is_admin,force_pw_change,created_at)", (?,?,?,?,'N','N',?))
+                    cursor.execute("""
+                        INSERT INTO user_master
+                        (
+                        user_id,
+                        user_pw,
+                        user_name,
+                        user_email,
+                        is_admin,
+                        force_pw_change,
+                        created_at
+                        )
+                        VALUES
+                        (
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?
+                        )
+                        """,
+                        (
+                        new_id,
+                        new_pw,
+                        new_name,
+                        new_email,
+                        "N",
+                        "N",
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        )
+                    )
                     conn.commit()
                     conn.close()
                     st.success("🎉 회원가입이 정상적으로 완료되었습니다! 로그인 페이지로 이동합니다.")
