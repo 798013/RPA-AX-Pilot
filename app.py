@@ -452,65 +452,57 @@ elif st.session_state["page_state"] == "main_dashboard":
 
         st.subheader("Selector Healing 이력")
 
-        # 1. 설정 및 권한 확인
+        # [기본 데이터 로직]
         is_admin = st.session_state.get("is_admin", "N") == "Y"
         current_user = st.session_state.get("current_user", "")
         user_list = ["전체"] + pd.read_sql("SELECT user_id FROM user_master", conn)["user_id"].tolist() if is_admin else [current_user]
 
-        # 2. 조회 필터 및 페이징 설정 UI
+        # [조회 UI: 5개 컬럼 정렬]
         col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 1, 1])
-        with col1:
-            search_date = st.date_input("날짜 선택", value=None)
-        with col2:
-            search_page = st.selectbox("페이지 선택", ["전체"] + pd.read_sql("SELECT page_name FROM page_elements", conn)["page_name"].tolist())
-        with col3:
-            search_user = st.selectbox("사용자 ID", user_list, disabled=(not is_admin))
-        with col4:
-            page_size = st.selectbox("건수", [50, 100, 150], index=0)
+        with col1: search_date = st.date_input("날짜 선택", value=None)
+        with col2: search_page = st.selectbox("페이지 선택", ["전체"] + pd.read_sql("SELECT page_name FROM page_elements", conn)["page_name"].tolist())
+        with col3: search_user = st.selectbox("사용자 ID", user_list, disabled=(not is_admin))
+        with col4: page_size = st.selectbox("건수", [50, 100, 150], index=0)
         with col5:
             st.markdown("<br>", unsafe_allow_html=True)
             search_btn = st.button("조회", use_container_width=True)
 
-        # 3. SQL 구성 (전체 내역 추출용)
-        base_query = "SELECT * FROM selector_healing_logs WHERE 1=1"
+        # [데이터 조회 로직]
+        query = "SELECT * FROM selector_healing_logs WHERE 1=1"
         params = []
-        if search_date:
-            base_query += " AND log_date LIKE ?"
+        if search_date: 
+            query += " AND log_date LIKE ?"
             params.append(f"{search_date}%")
         if search_page != "전체":
-            base_query += " AND page_name = ?"
+            query += " AND page_name = ?"
             params.append(search_page)
-        if search_user != "전체" and is_admin:
-            base_query += " AND user_id = ?"
+        if is_admin and search_user != "전체":
+            query += " AND user_id = ?"
             params.append(search_user)
         elif not is_admin:
-            base_query += " AND user_id = ?"
+            query += " AND user_id = ?"
             params.append(current_user)
+            
+        full_df = pd.read_sql(query + " ORDER BY log_id DESC", conn, params=params)
 
-        # 4. 조회 결과 처리
-        full_df = pd.read_sql(base_query + " ORDER BY log_id DESC", conn, params=params)
-        
+        # [결과 처리 및 엑셀 버튼 비활성화 로직]
         if full_df.empty:
             st.warning("🔍 조회된 Healing 이력이 없습니다.")
-            st.button("엑셀 다운로드", disabled=True) # 데이터 없을 시 비활성화
+            st.button("📥 엑셀 다운로드", disabled=True)
         else:
-            # 페이징: 선택한 건수만큼만 화면에 표시
             st.success(f"총 {len(full_df)}건이 조회되었습니다.")
             st.dataframe(full_df.head(page_size), use_container_width=True)
             
-        # 엑셀 다운로드 부분 수정 예시
-        try:
-            import openpyxl # 임포트 확인
+            # 엑셀 처리
+            import io
             buffer = io.BytesIO()
-            full_df.to_excel(buffer, index=False, engine='openpyxl') # engine 명시
+            full_df.to_excel(buffer, index=False, engine='openpyxl')
             st.download_button(
                 label="📥 엑셀 다운로드 (전체 내역)",
                 data=buffer.getvalue(),
                 file_name="healing_logs.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-        except ImportError:
-            st.error("엑셀 생성을 위한 필수 라이브러리(openpyxl)가 설치되지 않았습니다.")
 
     elif menu == "페이지 관리":
 
