@@ -452,12 +452,41 @@ elif st.session_state["page_state"] == "main_dashboard":
 
         st.subheader("Selector Healing 이력")
 
-        df = pd.read_sql(
-            "SELECT * FROM selector_healing_logs ORDER BY log_id DESC",
-            conn
-        )
+        # 1. 페이지 목록 동적 조회 (데이터베이스에서 불러오기)
+        pages_df = pd.read_sql("SELECT page_name FROM page_elements", conn)
+        page_list = ["전체"] + pages_df["page_name"].tolist()
+        
+        # 2. 조회 필터 배치
+        col1, col2, col3 = st.columns([2, 2, 1])
+        with col1:
+            search_date = st.date_input("날짜 선택", value=None)
+        with col2:
+            search_page = st.selectbox("페이지 선택", page_list)
+        with col3:
+            st.write("") # 간격 조절
+            search_btn = st.form_submit_button("조회") if "search_form" in locals() else st.button("조회")
 
-        st.dataframe(df, use_container_width=True)
+        # 3. SQL 동적 구성
+        query = "SELECT * FROM selector_healing_logs WHERE 1=1"
+        params = []
+        
+        if search_date:
+            query += " AND log_date LIKE ?"
+            params.append(f"{search_date}%")
+        if search_page != "전체":
+            query += " AND page_name = ?"
+            params.append(search_page)
+            
+        query += " ORDER BY log_id DESC"
+
+        # 4. 데이터 조회 및 예외 처리
+        df = pd.read_sql(query, conn, params=params)
+        
+        if df.empty:
+            st.warning("🔍 조회된 Healing 이력이 없습니다. 다른 조건으로 검색해 보세요.")
+        else:
+            st.success(f"총 {len(df)}건의 이력이 조회되었습니다.")
+            st.dataframe(df, use_container_width=True)
 
     elif menu == "페이지 관리":
 
