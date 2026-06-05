@@ -38,6 +38,17 @@ def init_db():
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('국토부_실거래가')")
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('상권정보_포털')")
 
+    # ai_analysis_logs 테이블 추가
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ai_analysis_logs (
+            analysis_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            log_id INTEGER,
+            recommended_selector TEXT,
+            analysis_reason TEXT,
+            created_at TEXT
+        )
+    """)
+
     # element_context 테이블 추가
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS element_context (
@@ -413,7 +424,7 @@ elif st.session_state["page_state"] == "main_dashboard":
             use_container_width=True
         )
 
-    # Healing Monitor 추
+    # Healing Monitor 추가
     elif menu == "Healing Monitor":
 
         st.subheader("Healing Request Monitor")
