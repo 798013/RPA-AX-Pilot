@@ -452,19 +452,31 @@ elif st.session_state["page_state"] == "main_dashboard":
 
         st.subheader("Selector Healing 이력")
 
-        # 1. 페이지 목록 동적 조회 (데이터베이스에서 불러오기)
-        pages_df = pd.read_sql("SELECT page_name FROM page_elements", conn)
-        page_list = ["전체"] + pages_df["page_name"].tolist()
+        # 1. 권한 및 사용자 데이터 가져오기
+        is_admin = st.session_state.get("is_admin", "N") == "Y"
+        current_user = st.session_state.get("current_user", "")
         
-        # 2. 조회 필터 배치
-        col1, col2, col3 = st.columns([2, 2, 1])
+        # 관리자일 경우 사용자 목록 전체 가져오기
+        if is_admin:
+            users_df = pd.read_sql("SELECT user_id FROM user_master", conn)
+            user_list = ["전체"] + users_df["user_id"].tolist()
+        else:
+            user_list = [current_user]
+
+        # 2. 조회 필터 배치 (UI 정렬 개선을 위해 columns 비율 조정)
+        # 3:3:3:1 비율로 배치하여 정렬을 맞춤
+        col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
+        
         with col1:
             search_date = st.date_input("날짜 선택", value=None)
         with col2:
-            search_page = st.selectbox("페이지 선택", page_list)
+            search_page = st.selectbox("페이지 선택", ["전체"] + pd.read_sql("SELECT page_name FROM page_elements", conn)["page_name"].tolist())
         with col3:
-            st.write("") # 간격 조절
-            search_btn = st.form_submit_button("조회") if "search_form" in locals() else st.button("조회")
+            # 관리자면 선택 가능, 일반사용자면 disabled 처리
+            search_user = st.selectbox("사용자 ID", user_list, disabled=(not is_admin))
+        with col4:
+            st.markdown("<br>", unsafe_allow_html=True) # 라벨 높이 맞춤용
+            search_btn = st.button("조회", use_container_width=True)
 
         # 3. SQL 동적 구성
         query = "SELECT * FROM selector_healing_logs WHERE 1=1"
@@ -476,14 +488,20 @@ elif st.session_state["page_state"] == "main_dashboard":
         if search_page != "전체":
             query += " AND page_name = ?"
             params.append(search_page)
+        if search_user != "전체" and is_admin:
+            query += " AND user_id = ?"
+            params.append(search_user)
+        elif not is_admin:
+            query += " AND user_id = ?"
+            params.append(current_user)
             
         query += " ORDER BY log_id DESC"
 
-        # 4. 데이터 조회 및 예외 처리
+        # 4. 데이터 조회 및 결과 출력
         df = pd.read_sql(query, conn, params=params)
         
         if df.empty:
-            st.warning("🔍 조회된 Healing 이력이 없습니다. 다른 조건으로 검색해 보세요.")
+            st.warning("🔍 조건에 일치하는 Healing 이력이 없습니다.")
         else:
             st.success(f"총 {len(df)}건의 이력이 조회되었습니다.")
             st.dataframe(df, use_container_width=True)
