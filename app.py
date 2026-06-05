@@ -718,8 +718,36 @@ elif st.session_state["page_state"] == "main_dashboard":
 
     elif menu == "비밀번호 변경":
 
-        st.session_state["page_state"] = "change_password"
-        st.rerun()
+        st.subheader("🔑 비밀번호 변경")
+        
+        with st.form("password_change_form"):
+            current_pw = st.text_input("현재 비밀번호", type="password")
+            new_pw = st.text_input("새 비밀번호", type="password")
+            confirm_pw = st.text_input("새 비밀번호 확인", type="password")
+            submit_btn = st.form_submit_button("비밀번호 변경하기")
+            
+        if submit_btn:
+            # 1. DB에서 현재 비밀번호 조회
+            user_id = st.session_state['current_user']
+            cursor = conn.cursor()
+            cursor.execute("SELECT password FROM user_master WHERE user_id = ?", (user_id,))
+            db_pw = cursor.fetchone()[0]
+            
+            # 2. 로직 검증
+            if current_pw != db_pw:
+                st.error("현재 비밀번호가 일치하지 않습니다.")
+            elif new_pw != confirm_pw:
+                st.error("새 비밀번호와 확인란의 내용이 다릅니다.")
+            elif new_pw == "":
+                st.error("새 비밀번호를 입력해주세요.")
+            else:
+                # 3. DB 업데이트 실행
+                cursor.execute("UPDATE user_master SET password = ? WHERE user_id = ?", (new_pw, user_id))
+                conn.commit()
+                st.success("비밀번호가 성공적으로 변경되었습니다. 다시 로그인해 주세요.")
+                # 선택사항: 변경 후 로그아웃 처리하려면 아래 주석 해제
+                # st.session_state['logged_in'] = False
+                # st.rerun()
 
     elif menu == "로그아웃":
 
