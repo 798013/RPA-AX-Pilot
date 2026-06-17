@@ -8,6 +8,19 @@ import re
 import secrets
 import requests
 
+# 임시
+def get_mssql_connection():
+
+    conn = pyodbc.connect(
+        "DRIVER={ODBC Driver 17 for SQL Server};"
+        "SERVER=localhost\\EXPRESS2025;"
+        "DATABASE=HealingDB;"
+        "Trusted_Connection=yes;"
+        "TrustServerCertificate=yes;"
+    )
+
+    return conn
+
 def init_db():
     conn = sqlite3.connect("rpa_management.db")
     cursor = conn.cursor()
