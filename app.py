@@ -198,7 +198,7 @@ if st.session_state["page_state"] == "default_error":
 elif st.session_state["page_state"] == "signup":
     st.set_page_config(page_title="신규 회원가입", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align: center;'>📝 관제 시스템 신규 회원가입</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>📝 Self-Healing Portal 신규 회원가입</h2>", unsafe_allow_html=True)
     
     with st.form("signup_form"):
         new_id = st.text_input("사용할 아이디 (ID)", placeholder="5~15자, 영문 소문자로 시작하는 영문+숫자 조합")
