@@ -315,11 +315,11 @@ elif st.session_state["page_state"] == "login":
 elif st.session_state["page_state"] == "main_dashboard":
 
     st.set_page_config(
-        page_title="AX-RPA Selector 관제 콘솔",
+        page_title="Self-Healing Portal",
         layout="wide"
     )
 
-    st.title("🤖 AX-RPA Selector 관제 콘솔")
+    st.title("🤖 Self-Healing Portal")
 
     with st.sidebar:
         st.success(f"사용자 : {st.session_state['current_user']}")
