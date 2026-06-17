@@ -36,6 +36,16 @@ def init_db():
             created_at TEXT
         )
     """)
+
+    # 임시 - 0617 - 시작
+    try:
+        cursor.execute(
+            "ALTER TABLE user_master ADD COLUMN project_name TEXT"
+        )
+    except:
+        pass
+    # 임시 - 0617 - 끝
+    
     cursor.execute("CREATE TABLE IF NOT EXISTS page_elements (page_name TEXT UNIQUE)")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS selector_healing_logs (
