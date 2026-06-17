@@ -308,23 +308,20 @@ elif st.session_state["page_state"] == "find_account":
 
 # --- 화면 4: 기본 로그인 화면 ---
 elif st.session_state["page_state"] == "login":
-    st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
+    st.set_page_config(page_title="Self-Healing Portal 로그인", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>Self-Healing Portal 로그인</h1>", unsafe_allow_html=True)
     
-    user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
-    user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
-    
-    st.write("")
-    col_nav1, col_nav2, col_nav3 = st.columns(3)
-    with col_nav1:
-        if st.button("ID / PW 찾기", use_container_width=True):
-            change_page_and_clear_inputs("find_account")
-    with col_nav2:
-        if st.button("회원 가입", use_container_width=True):
-            change_page_and_clear_inputs("signup")
-    with col_nav3:
-        if st.button("로그인", type="primary", use_container_width=True):
+    # 🟢 1. ID/PW 입력창과 로그인 버튼을 하나의 Form 그룹으로 묶어줍니다.
+    with st.form("login_form"):
+        user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
+        user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
+        
+        st.write("")
+        # 🟢 2. st.button 대신 st.form_submit_button을 쓰면 PW 창에서 Enter 쳤을 때 실행됩니다!
+        submit_login = st.form_submit_button("로그인", type="primary", use_container_width=True)
+        
+        if submit_login:
             conn = sqlite3.connect("rpa_management.db")
             cursor = conn.cursor()
             cursor.execute("""SELECT user_pw,is_admin,force_pw_change FROM user_master WHERE user_id = ?""", (user_id,))
@@ -333,7 +330,6 @@ elif st.session_state["page_state"] == "login":
             
             if db_result and db_result[0] == user_pw:
                 st.session_state["is_admin"] = db_result[1]
-
                 if db_result[2] == "Y":
                     st.session_state["page_state"] = "change_password"
                     st.rerun()
@@ -343,6 +339,15 @@ elif st.session_state["page_state"] == "login":
             else:
                 st.session_state["page_state"] = "default_error"
                 st.rerun()
+
+    # 🟢 3. 이동 버튼(찾기, 가입)은 굳이 Enter 칠 필요 없으니 Form 밖으로 빼서 하단에 배치합니다.
+    col_nav1, col_nav2 = st.columns(2)
+    with col_nav1:
+        if st.button("ID / PW 찾기", use_container_width=True):
+            change_page_and_clear_inputs("find_account")
+    with col_nav2:
+        if st.button("회원 가입", use_container_width=True):
+            change_page_and_clear_inputs("signup")
 
 
 # --- 화면 5: 메인 관제 대시보드 ---
