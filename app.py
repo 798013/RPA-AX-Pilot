@@ -28,6 +28,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS user_master (
             user_id TEXT PRIMARY KEY,
             user_pw TEXT NOT NULL,
+            project_name TEXT,
             user_name TEXT NOT NULL,
             user_email TEXT NOT NULL,
             is_admin TEXT DEFAULT 'N',
@@ -47,7 +48,7 @@ def init_db():
             config_key TEXT PRIMARY KEY, config_value TEXT
         )
     """)
-    cursor.execute("INSERT OR IGNORE INTO user_master VALUES ('admin','1234','홍길동','sict@sict.co.kr','Y','N',datetime('now'))")
+    cursor.execute("INSERT OR IGNORE INTO user_master VALUES ('admin','1234','Pilot','홍길동','sict@sict.co.kr','Y','N',datetime('now'))")
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('국토부_실거래가')")
     cursor.execute("INSERT OR IGNORE INTO page_elements VALUES ('상권정보_포털')")
 
@@ -118,6 +119,13 @@ def init_db():
     cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('SMTP_SERVER', '://gmail.com')")
     cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('SMTP_PORT', '587')")
     cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('DB_PATH', 'rpa_management.db')")
+
+    # 임시 - 0617 - 시작
+    cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('DB_SERVER', 'localhost\\EXPRESS2025')")
+    cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('DB_NAME', 'HealingDB')")
+    cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('DB_TYPE', 'MSSQL')")
+    # 임시 - 0617 - 끝
+    
     cursor.execute("INSERT OR IGNORE INTO system_config VALUES ('EMAIL_API_KEY', 'mqkrwdrn')")
     conn.commit()
     conn.close()
