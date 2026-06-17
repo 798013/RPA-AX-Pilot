@@ -203,6 +203,7 @@ elif st.session_state["page_state"] == "signup":
     with st.form("signup_form"):
         new_id = st.text_input("사용할 아이디 (ID)", placeholder="5~15자, 영문 소문자로 시작하는 영문+숫자 조합")
         new_pw = st.text_input("비밀번호 (Password)", type="password")
+        new_project = st.text_input("사이트명")
         new_name = st.text_input("사용자 이름")
         new_email = st.text_input("이메일 주소 (필수 입력)", placeholder="example@sictglobal.com")
         submit_signup = st.form_submit_button("가입 신청 완료")
@@ -210,7 +211,7 @@ elif st.session_state["page_state"] == "signup":
         if submit_signup:
             id_pattern = re.compile(r"^[a-z][a-z0-9]{4,14}$")
             email_pattern = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
-            if not (new_id and new_pw and new_name and new_email):
+            if not (new_id and new_pw and new_project and new_name and new_email):
                 st.error("⚠️ 모든 칸을 정확하게 입력해 주세요.")
             elif not id_pattern.match(new_id):
                 st.error("❌ 아이디 규칙 위반: 5~15자 영문 소문자 시작, 영문 소문자+숫자 조합만 가능.")
@@ -229,6 +230,7 @@ elif st.session_state["page_state"] == "signup":
                         (
                         user_id,
                         user_pw,
+                        project_name,
                         user_name,
                         user_email,
                         is_admin,
@@ -249,6 +251,7 @@ elif st.session_state["page_state"] == "signup":
                         (
                         new_id,
                         new_pw,
+                        new_project,
                         new_name,
                         new_email,
                         "N",
