@@ -375,7 +375,7 @@ elif st.session_state["page_state"] == "main_dashboard":
         is_admin = st.session_state.get("is_admin", "N") == "Y"
         
         # 2. 메뉴 리스트 정의
-        menu_options = ["Dashboard", "Healing 이력", "Healing Monitor", "Knowledge DB", "AI Analysis Log"]
+        menu_options = ["Dashboard", "Knowledge DB"]
         
         # 3. 관리자 전용 메뉴 추가
         if is_admin:
@@ -724,33 +724,6 @@ elif st.session_state["page_state"] == "main_dashboard":
                 file_name="healing_logs.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-
-    elif menu == "페이지 관리":
-
-        st.subheader("관리 대상 페이지")
-
-        pages = pd.read_sql(
-            "SELECT * FROM page_elements",
-            conn
-        )
-
-        st.dataframe(pages, use_container_width=True)
-
-        new_page = st.text_input("신규 페이지명")
-
-        if st.button("페이지 추가"):
-
-            cursor = conn.cursor()
-
-            cursor.execute(
-                "INSERT OR IGNORE INTO page_elements VALUES (?)",
-                (new_page,)
-            )
-
-            conn.commit()
-
-            st.success("등록 완료")
-            st.rerun()
 
     elif menu == "시스템 설정":
 
