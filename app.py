@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import pyodbc  # 🟢 SQLite 완전 제거 후 투입된 MSSQL 드라이버
+import pyodbc
 from datetime import datetime
 import base64
 import time
