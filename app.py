@@ -276,7 +276,7 @@ elif st.session_state["page_state"] == "find_account":
 elif st.session_state["page_state"] == "login":
     st.set_page_config(page_title="AX-RPA 제어 포털 로그인", layout="centered")
     st.markdown(logo_html, unsafe_allow_html=True)
-    st.markdown("<h1 style='text-align: center;'>AX-RPA 관제 시스템 로그인</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Self-Healing Portal 로그인</h1>", unsafe_allow_html=True)
     
     user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
     user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
