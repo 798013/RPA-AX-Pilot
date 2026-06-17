@@ -312,15 +312,26 @@ elif st.session_state["page_state"] == "login":
     st.markdown(logo_html, unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>Self-Healing Portal 로그인</h1>", unsafe_allow_html=True)
     
-    # 🟢 1. ID/PW 입력창과 로그인 버튼을 하나의 Form 그룹으로 묶어줍니다.
+    # 🟢 하나의 Form으로 전체를 감싸서 시각적 안정감을 줍니다.
     with st.form("login_form"):
         user_id = st.text_input("아이디 (ID)", key=f"id_input_{st.session_state['login_id_key']}")
         user_pw = st.text_input("비밀번호 (Password)", type="password", key=f"pw_input_{st.session_state['login_pw_key']}")
         
         st.write("")
-        # 🟢 2. st.button 대신 st.form_submit_button을 쓰면 PW 창에서 Enter 쳤을 때 실행됩니다!
+        
+        # 🟢 1. 메인 액션인 로그인 버튼을 위에 묵직하게 배치 (엔터 키 타겟)
         submit_login = st.form_submit_button("로그인", type="primary", use_container_width=True)
         
+        st.write("")
+        
+        # 🟢 2. 서브 액션 버튼들을 하단에 배치하되, Form 전용 서브밋 버튼으로 선언하여 오류를 방지합니다.
+        col_nav1, col_nav2 = st.columns(2)
+        with col_nav1:
+            submit_find = st.form_submit_button("ID / PW 찾기", use_container_width=True)
+        with col_nav2:
+            submit_signup = st.form_submit_button("회원 가입", use_container_width=True)
+        
+        # --- 각 버튼별 로직 분기 ---
         if submit_login:
             conn = sqlite3.connect("rpa_management.db")
             cursor = conn.cursor()
@@ -339,14 +350,11 @@ elif st.session_state["page_state"] == "login":
             else:
                 st.session_state["page_state"] = "default_error"
                 st.rerun()
-
-    # 🟢 3. 이동 버튼(찾기, 가입)은 굳이 Enter 칠 필요 없으니 Form 밖으로 빼서 하단에 배치합니다.
-    col_nav1, col_nav2 = st.columns(2)
-    with col_nav1:
-        if st.button("ID / PW 찾기", use_container_width=True):
+                
+        elif submit_find:
             change_page_and_clear_inputs("find_account")
-    with col_nav2:
-        if st.button("회원 가입", use_container_width=True):
+            
+        elif submit_signup:
             change_page_and_clear_inputs("signup")
 
 
